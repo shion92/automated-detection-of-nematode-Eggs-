@@ -19,32 +19,29 @@ thresh = cv2.adaptiveThreshold(
 
 # Perform morphological operations to remove small noise
 kernel = np.ones((3, 3), np.uint8)
-cleaned = cv2.morphologyEx(
-    thresh, cv2.MORPH_CLOSE, kernel, iterations=2
-)  
-cleaned = cv2.morphologyEx(
-    cleaned, cv2.MORPH_OPEN, kernel, iterations=1
-)  
+cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_OPEN, kernel, iterations=1)
 
 # Find contours of possible eggs
 contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-# Filter contours based on circularity and size
+# Filter contours based on **ellipticity** and size
 filtered_contours = []
 min_area = 150  # Minimum area to filter small objects
-circularity_threshold = 0.8  
+aspect_ratio_threshold = 1.2  # Minimum elongation ratio (filter out near-circular objects)
 
 for cnt in contours:
     area = cv2.contourArea(cnt)
-    perimeter = cv2.arcLength(cnt, True)
+    if area < min_area:
+        continue  # Skip small objects
+    
+    if len(cnt) >= 5:  # At least 5 points needed to fit an ellipse
+        ellipse = cv2.fitEllipse(cnt)
+        (x, y), (major_axis, minor_axis), angle = ellipse  # Get ellipse parameters
+        aspect_ratio = max(major_axis, minor_axis) / min(major_axis, minor_axis)  # Compute aspect ratio
 
-    if perimeter == 0:
-        continue  # Avoid division by zero
-
-    circularity = 4 * np.pi * (area / (perimeter**2))  
-
-    if area > min_area and circularity > circularity_threshold:  
-        filtered_contours.append(cnt)
+        if aspect_ratio > aspect_ratio_threshold:  # Ensure elongated shape
+            filtered_contours.append(cnt)
 
 # Draw filtered contours on the original image
 output_image = image.copy()
@@ -59,6 +56,6 @@ plt.title("Grayscale Image")
 
 plt.subplot(1, 2, 2)
 plt.imshow(cv2.cvtColor(output_image, cv2.COLOR_BGR2RGB))
-plt.title(f"Detected Eggs: {num_eggs}")
+plt.title(f"Detected Elliptical Eggs: {num_eggs}")
 
 plt.show()
