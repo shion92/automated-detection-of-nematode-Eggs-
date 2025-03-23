@@ -1,10 +1,9 @@
 import cv2
 import os
 
-# Define paths relative to the current working directory
 current_dir = os.getcwd()
-image_dir = os.path.join(current_dir, "Data", "Images")  # CHANGE if images are in a different folder
-yolo_dir = os.path.join(current_dir, "Data", "YOLO_Annotations")  # Ensure this matches your annotation folder
+image_dir = os.path.join(current_dir, "Data", "Images")  
+yolo_dir = os.path.join(current_dir, "Data", "YOLO_Annotations")  
 
 # Define class names and colors for visualization
 CLASS_MAPPING = {
