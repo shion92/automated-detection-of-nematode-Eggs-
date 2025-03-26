@@ -1,13 +1,12 @@
 import os
 import xml.etree.ElementTree as ET
 
-# Define paths relative to the current working directory
 current_dir = os.getcwd()
-xml_dir = os.path.join(current_dir, "Data", "Labels")  # CHANGE if necessary
-yolo_dir = os.path.join(current_dir, "Data", "YOLO_Annotations")
+xml_dir = os.path.join(current_dir, "labels", "train")  
+yolo_dir = os.path.join(current_dir, "labels", "train")
 os.makedirs(yolo_dir, exist_ok=True)
 
-# Define class mappings (modify as needed)
+# Define class mappings 
 CLASS_MAPPING = {
     "nematode egg": 0,
     "water bubble": 1,

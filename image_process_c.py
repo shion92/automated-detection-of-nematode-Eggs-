@@ -1,40 +1,55 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
 # Define image file paths
 image_files = [
-    "Data/Image_01.tif",
-    "Data/Image_02.tif",
-    "Data/Image_03.tif",
-    "Data/Image_04.tif",
-    "Data/Image_05.tif"
+    "images/train/Image_01.tif",
+    "images/train/Image_02.tif",
+    "images/train/Image_04.tif",
+    "images/train/Image_16.tif",
+    "images/train/Image_17.tif",
+    "images/train/Image_18.tif",
+    "images/train/Image_41.tif",
+    "images/train/Image_43.tif",
+    "images/train/Image_46.tif",
+    "images/train/Image_49.tif",
+    "images/train/Image_55.tif",
+    "images/train/Image_60.tif",
+    "images/train/Image_67.tif",
+    "images/train/Image_68.tif",
+
+    
 ]
+
+# Create directory to save outputs
+os.makedirs("Processed_Images", exist_ok=True)
 
 def optimized_process_image(image_path):
     image = cv2.imread(image_path)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Step 1: Reduce background noise with Gaussian Blur
-    blurred_gray = cv2.GaussianBlur(gray, (7, 7), 0)  # Increased kernel for better smoothing
+    blurred_gray = cv2.GaussianBlur(gray, (7, 7), 0)
 
-    # Step 2: Apply global thresholding instead of Otsu to prevent excessive noise
+    # Step 2: Apply global thresholding
     _, thresholded = cv2.threshold(blurred_gray, 180, 255, cv2.THRESH_BINARY_INV)
 
-    # Step 3: Apply morphological opening to remove small noise
+    # Step 3: Apply morphological opening
     morph_kernel = np.ones((5, 5), np.uint8)
     thresholded = cv2.morphologyEx(thresholded, cv2.MORPH_OPEN, morph_kernel, iterations=1)
 
-    # Step 4: Apply edge detection with controlled thresholds
+    # Step 4: Edge detection
     edges = cv2.Canny(thresholded, 50, 100)
 
-    # Step 5: Apply morphological closing to smooth edges
+    # Step 5: Morphological closing
     edges_closed = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8), iterations=2)
 
     # Step 6: Find contours
     contours, _ = cv2.findContours(edges_closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Step 7: Filter contours based on area, aspect ratio, and solidity
+    # Step 7: Filter contours
     filtered_contours = []
     min_area = 600  # Lowered to include smaller eggs
     max_area = 12000
@@ -58,11 +73,16 @@ def optimized_process_image(image_path):
             if aspect_ratio > aspect_ratio_threshold and solidity > solidity_threshold:
                 filtered_contours.append(cnt)
 
-    # Step 8: Draw contours with anti-aliasing for smoother edges
+    # Step 8: Draw final contours
     output_image = image.copy()
     cv2.drawContours(output_image, filtered_contours, -1, (0, 255, 0), 2, lineType=cv2.LINE_AA)
 
-    # Step 9: Display images at each step for visual comparison
+    # Step 9: Save processed image for YOLO or other use
+    filename = os.path.basename(image_path)
+    output_path = os.path.join("Processed_Images", f"processed_{filename}")
+    cv2.imwrite(output_path, output_image)
+
+   
     fig, axes = plt.subplots(3, 3, figsize=(15, 12))
 
     axes[0, 0].imshow(gray, cmap="gray")
@@ -96,6 +116,6 @@ def optimized_process_image(image_path):
     plt.tight_layout()
     plt.show()
 
-# Process images with enhanced visualization
+# Process each image and output results
 for image_file in image_files:
     optimized_process_image(image_file)

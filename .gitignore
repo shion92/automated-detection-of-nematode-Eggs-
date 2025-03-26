@@ -12,6 +12,8 @@ __pycache__/
 venv/
 images/
 runs/
+labels/
+Processed_Images/
 
 # macOS
 .DS_Store
