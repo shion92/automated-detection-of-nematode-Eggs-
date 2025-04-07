@@ -8,8 +8,8 @@ print(os.path.abspath("Data"))
 # yolo task=detect mode=val model=runs/detect/train/weights/best.pt data=data.yaml
 
 # detect the model 
-yolo task=detect mode=predict model=runs/detect/train2/weights/best.pt source=images/train/
+yolo task=detect mode=predict model=runs/detect/train3/weights/best.pt source=images/train/
 
 
 # predict the new image
-yolo task=detect mode=predict model=runs/detect/train2/weights/best.pt data=data.yaml source=images/image_06.tif
+yolo task=detect mode=predict model=runs/detect/train3/weights/best.pt data=data.yaml source=Data/
