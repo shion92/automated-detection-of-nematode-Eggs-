@@ -4,24 +4,34 @@ import matplotlib.pyplot as plt
 import os
 
 # Define image file paths
-image_files = [
-    "images/train/Image_01.tif",
-    "images/train/Image_02.tif",
-    "images/train/Image_04.tif",
-    "images/train/Image_16.tif",
-    "images/train/Image_17.tif",
-    "images/train/Image_18.tif",
-    "images/train/Image_41.tif",
-    "images/train/Image_43.tif",
-    "images/train/Image_46.tif",
-    "images/train/Image_49.tif",
-    "images/train/Image_55.tif",
-    "images/train/Image_60.tif",
-    "images/train/Image_67.tif",
-    "images/train/Image_68.tif",
+# image_files = [
+#     "images/train/Image_01.tif",
+#     "images/train/Image_02.tif",
+#     "images/train/Image_04.tif",
+#     "images/train/Image_16.tif",
+#     "images/train/Image_17.tif",
+#     "images/train/Image_18.tif",
+#     "images/train/Image_41.tif",
+#     "images/train/Image_43.tif",
+#     "images/train/Image_46.tif",
+#     "images/train/Image_49.tif",
+#     "images/train/Image_55.tif",
+#     "images/train/Image_60.tif",
+#     "images/train/Image_67.tif",
+#     "images/train/Image_68.tif",
 
     
-]
+# ]
+# === Setup paths ===
+image_folder = "images/train/"
+processed_dir = "Processed_Images/without_fastNIMeansDenoising/"
+steps_dir = os.path.join(processed_dir, "Steps")
+os.makedirs(processed_dir, exist_ok=True)
+os.makedirs(steps_dir, exist_ok=True)
+
+# Gather .tif images from folder
+image_files = [os.path.join(image_folder, f) for f in os.listdir(image_folder)
+               if f.lower().endswith('.tif')]
 
 # Create directory to save outputs
 os.makedirs("Processed_Images", exist_ok=True)
@@ -79,7 +89,7 @@ def optimized_process_image(image_path):
 
     # Step 9: Save processed image for YOLO or other use
     filename = os.path.basename(image_path)
-    output_path = os.path.join("Processed_Images", f"processed_{filename}")
+    output_path = os.path.join(processed_dir, f"processed_{filename}")
     cv2.imwrite(output_path, output_image)
 
    
@@ -114,7 +124,12 @@ def optimized_process_image(image_path):
     axes[2, 1].set_title(f"8. Final Detection: {len(filtered_contours)} Eggs")
 
     plt.tight_layout()
-    plt.show()
+    
+    # Save the combined image of all steps
+    step_image_path = os.path.join(processed_dir, "Steps", f"steps_{filename}.png")
+    plt.savefig(step_image_path, dpi=150, bbox_inches='tight')
+        
+    plt.close()  
 
 # Process each image and output results
 for image_file in image_files:

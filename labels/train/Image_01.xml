@@ -1,7 +1,7 @@
 <annotation>
-	<folder>Data</folder>
+	<folder>train</folder>
 	<filename>Image_01.tif</filename>
-	<path>/Users/shion/Desktop/COMP693/automated-detection-of-nematode-Eggs-/Data/Image_01.tif</path>
+	<path>/Users/shion/Desktop/COMP693/automated-detection-of-nematode-Eggs-/images/train/Image_01.tif</path>
 	<source>
 		<database>Unknown</database>
 	</source>
@@ -19,8 +19,8 @@
 		<bndbox>
 			<xmin>971</xmin>
 			<ymin>458</ymin>
-			<xmax>1071</xmax>
-			<ymax>565</ymax>
+			<xmax>1061</xmax>
+			<ymax>548</ymax>
 		</bndbox>
 	</object>
 	<object>
