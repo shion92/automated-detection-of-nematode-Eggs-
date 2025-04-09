@@ -4,12 +4,12 @@ import cv2
 import xml.etree.ElementTree as ET
 from glob import glob
 import numpy as np
-from collections import defaultdict
 import matplotlib.pyplot as plt
 
 # === Config ===
-GT_DIR = "labels/train"  # <-- Your annotation folder
-PRED_DIR = "Processed_Images/with_fastNIMeansDenoising/"  # OpenCV output
+GT_DIR = "labels/train"
+PRED_JSON_DIR = "Processed_Images/with_fastNIMeansDenoising/Predictions"
+IMAGE_DIR = "images/train"
 IOU_THRESHOLD = 0.5
 OUTPUT_DIR = "evaluation_outputs/"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -57,19 +57,23 @@ for xml_path in glob(os.path.join(GT_DIR, "*.xml")):
     filename = os.path.basename(xml_path).replace(".xml", ".tif")
     gt_boxes = parse_voc_xml(xml_path)
 
-    # === Predicted bounding boxes from OpenCV ===
-    pred_image_path = os.path.join(PRED_DIR, f"processed_{filename}")
-    if not os.path.exists(pred_image_path):
-        print(f"⚠️ Skipping {filename}: prediction image not found.")
+    # === Load predicted boxes from JSON ===
+    json_path = os.path.join(PRED_JSON_DIR, f"{os.path.splitext(filename)[0]}.json")
+    if not os.path.exists(json_path):
+        print(f"⚠️ Skipping {filename}: prediction JSON not found.")
         continue
 
-    pred_img = cv2.imread(pred_image_path)
-    pred_gray = cv2.cvtColor(pred_img, cv2.COLOR_BGR2GRAY)
-    _, bin_pred = cv2.threshold(pred_gray, 1, 255, cv2.THRESH_BINARY)
-    contours, _ = cv2.findContours(bin_pred, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    pred_boxes = [cv2.boundingRect(c) for c in contours]
-    pred_boxes = [[x, y, x+w, y+h] for x, y, w, h in pred_boxes]
+    with open(json_path, "r") as jf:
+        data = json.load(jf)
+        pred_boxes = data.get("boxes", [])
 
+    # === Load image for visualisation ===
+    image_path = os.path.join(IMAGE_DIR, filename)
+    if not os.path.exists(image_path):
+        print(f"⚠️ Skipping {filename}: original image not found.")
+        continue
+
+    vis = cv2.imread(image_path)
     matched_gt = set()
     matched_pred = set()
     ious = []
@@ -109,7 +113,6 @@ for xml_path in glob(os.path.join(GT_DIR, "*.xml")):
     }
 
     # === Visualise matched/unmatched boxes ===
-    vis = pred_img.copy()
     for gb in gt_boxes:
         cv2.rectangle(vis, (gb[0], gb[1]), (gb[2], gb[3]), (255, 0, 0), 2)  # Blue = GT
     for i, pb in enumerate(pred_boxes):
@@ -138,7 +141,7 @@ with open(os.path.join(OUTPUT_DIR, "metrics_imagewise.json"), "w") as f:
 with open(os.path.join(OUTPUT_DIR, "metrics_summary.json"), "w") as f:
     json.dump(summary, f, indent=2)
 
-print("✅ Evaluation complete. Results saved to:")
+print("\n✅ Evaluation complete. Results saved to:")
 print(f" - {os.path.join(OUTPUT_DIR, 'metrics_imagewise.json')}")
 print(f" - {os.path.join(OUTPUT_DIR, 'metrics_summary.json')}")
 print(f" - Visuals saved in: {os.path.join(OUTPUT_DIR, 'vis/')}")

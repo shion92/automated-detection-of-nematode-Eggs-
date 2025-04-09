@@ -2,13 +2,16 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import json
 
 # === Setup paths ===
 image_folder = "images/train/"
 processed_dir = "Processed_Images/with_fastNIMeansDenoising/"
 steps_dir = os.path.join(processed_dir, "Steps")
+pred_json_dir = os.path.join(processed_dir, "Predictions")
 os.makedirs(processed_dir, exist_ok=True)
 os.makedirs(steps_dir, exist_ok=True)
+os.makedirs(pred_json_dir, exist_ok=True)
 
 # Gather .tif images from folder
 image_files = [os.path.join(image_folder, f) for f in os.listdir(image_folder)
@@ -28,7 +31,7 @@ def optimized_process_image(image_path):
     _, thresholded_raw = cv2.threshold(blurred_gray, 180, 255, cv2.THRESH_BINARY_INV)
 
     # Step 4: Morphological opening (refined)
-    morph_kernel = np.ones((3, 3), np.uint8)  # Less aggressive than (5,5)
+    morph_kernel = np.ones((3, 3), np.uint8)
     opened = cv2.morphologyEx(thresholded_raw, cv2.MORPH_OPEN, morph_kernel, iterations=1)
 
     # Step 4.5: Remove small debris using connected components
@@ -51,6 +54,7 @@ def optimized_process_image(image_path):
 
     # Step 8: Filter contours based on oval geometry
     filtered_contours = []
+    predicted_boxes = []
     min_area = 600
     max_area = 12000
     min_aspect_ratio = 1.3
@@ -65,18 +69,18 @@ def optimized_process_image(image_path):
             ellipse = cv2.fitEllipse(cnt)
             (x, y), (major_axis, minor_axis), angle = ellipse
             aspect_ratio = max(major_axis, minor_axis) / min(major_axis, minor_axis)
-
             hull = cv2.convexHull(cnt)
             hull_area = cv2.contourArea(hull)
             solidity = area / hull_area if hull_area > 0 else 0
 
             if min_aspect_ratio <= aspect_ratio <= max_aspect_ratio and solidity >= solidity_threshold:
                 filtered_contours.append(cnt)
+                x_box, y_box, w_box, h_box = cv2.boundingRect(cnt)
+                predicted_boxes.append([x_box, y_box, x_box + w_box, y_box + h_box])
 
     # Step 9: Draw filtered contours and overlay file name
     output_image = image.copy()
     cv2.drawContours(output_image, filtered_contours, -1, (0, 255, 0), 2, lineType=cv2.LINE_AA)
-
     filename = os.path.basename(image_path)
     cv2.putText(
         output_image,
@@ -88,6 +92,11 @@ def optimized_process_image(image_path):
         thickness=2,
         lineType=cv2.LINE_AA
     )
+
+    # Save prediction boxes as JSON
+    json_path = os.path.join(pred_json_dir, f"{os.path.splitext(filename)[0]}.json")
+    with open(json_path, "w") as jf:
+        json.dump({"filename": filename, "boxes": predicted_boxes}, jf, indent=2)
 
     # Step 10: Save final processed image
     output_path = os.path.join(processed_dir, f"processed_{filename}")
@@ -124,13 +133,11 @@ def optimized_process_image(image_path):
 
     axes[2, 2].imshow(cv2.cvtColor(output_image, cv2.COLOR_BGR2RGB))
     axes[2, 2].set_title(f"9. Final Detection: {len(filtered_contours)} Eggs ({filename})")
-
+    
     plt.tight_layout()
-    # Save the combined image of all steps
-    step_image_path = os.path.join(processed_dir, "Steps", f"steps_{filename}.png")
+    step_image_path = os.path.join(steps_dir, f"steps_{filename}.png")
     plt.savefig(step_image_path, dpi=150, bbox_inches='tight')
-        
-    plt.close()  
+    plt.close()
 
 # Process all images
 for image_file in image_files:
