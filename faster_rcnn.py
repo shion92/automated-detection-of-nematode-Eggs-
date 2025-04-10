@@ -135,7 +135,7 @@ def predict_and_save(model, split="test"):
     model.eval()
 
     with torch.no_grad():
-        for imgs, _, names in loader:
+        for imgs, _, names in tqdm(loader, desc=f"Inference on {split} set"):
             img = imgs[0].to(DEVICE)
             output = model([img])[0]
 
@@ -149,11 +149,20 @@ def predict_and_save(model, split="test"):
             with open(out_path, 'w') as f:
                 json.dump(pred_json, f, indent=2)
 
+
 # -------------------------
 # Main
 # -------------------------
 if __name__ == "__main__":
+    start_time = time.time()
+
+    print("Starting training...")
     model = train_model()
-    predict_and_save(model, split="test")
-    predict_and_save(model, split="val")
-    predict_and_save(model, split="train")
+
+    for split in ["test", "val", "train"]:
+        print(f"\nRunning inference on {split} set...")
+        predict_and_save(model, split=split)
+
+    total_time = time.time() - start_time
+    print(f"\nDone! Total runtime: {total_time:.2f} seconds.")
+
