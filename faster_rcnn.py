@@ -12,12 +12,20 @@ from torchvision.transforms import functional as F
 import xml.etree.ElementTree as ET
 import json
 import time
-from tqdm import tqdm
+from tqdm import tqd
+import random
+
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
 
 # -------------------------
 # Configuration
 # -------------------------
-DEVICE = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+DEVICE = torch.device('mps') if torch.backends.mps.is_available() else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 NUM_CLASSES = 2  # 1 class (nematode egg) + background
 CLASS_NAMES = ["__background__", "nematode egg"]
 TRAIN_DIR = "dataset/train"
@@ -97,6 +105,8 @@ def get_loader(root, batch_size=2):
 # Training Loop
 # -------------------------
 def train_model():
+    set_seed()
+
     train_loader = get_loader(TRAIN_DIR)
     val_loader = get_loader(VAL_DIR)
 
@@ -106,13 +116,22 @@ def train_model():
     model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, NUM_CLASSES)
     model.to(DEVICE)
 
+    if DEVICE.type == "cuda":
+        print("✅ Training on GPU")
+    else:
+        print("⚠️ Training on CPU (check Metal acceleration support if using Mac M1/M2/M3)")
+
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
 
     num_epochs = 10
-    model.train()
+    best_val_loss = float('inf')
+
     for epoch in range(num_epochs):
-        for images, targets, _ in train_loader:
+        model.train()
+        running_loss = 0.0
+
+        for batch_idx, (images, targets, _) in enumerate(train_loader):
             images = list(img.to(DEVICE) for img in images)
             targets = [{k: v.to(DEVICE) for k, v in t.items()} for t in targets]
 
@@ -123,10 +142,34 @@ def train_model():
             losses.backward()
             optimizer.step()
 
-        print(f"Epoch {epoch+1}, Loss: {losses.item():.4f}")
+            running_loss += losses.item()
+            if batch_idx % 5 == 0:
+                print(f"   Batch {batch_idx}, Training Loss: {losses.item():.4f}")
 
-    torch.save(model.state_dict(), "faster_rcnn_nematode.pth")
+        avg_train_loss = running_loss / len(train_loader)
+        print(f"Epoch {epoch+1}, Avg Training Loss: {avg_train_loss:.4f}")
+
+        # --- Validation loop ---
+        model.eval()
+        val_loss = 0.0
+        with torch.no_grad():
+            for images, targets, _ in val_loader:
+                images = list(img.to(DEVICE) for img in images)
+                targets = [{k: v.to(DEVICE) for k, v in t.items()} for t in targets]
+
+                loss_dict = model(images, targets)
+                val_loss += sum(loss for loss in loss_dict.values()).item()
+        avg_val_loss = val_loss / len(val_loader)
+        print(f"   🔍 Validation Loss: {avg_val_loss:.4f}")
+
+        # --- Save best model ---
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            torch.save(model.state_dict(), "faster_rcnn_nematode_best.pth")
+            print(f"   ✅ New best model saved! (Val Loss: {best_val_loss:.4f})")
+
     return model
+
 
 # -------------------------
 # Inference & Save Predictions
