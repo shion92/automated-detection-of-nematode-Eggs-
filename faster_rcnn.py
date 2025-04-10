@@ -7,6 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import torchvision
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
+from torchvision.models.detection import FasterRCNN_ResNet50_FPN_Weights
 from torchvision.transforms import functional as F
 import xml.etree.ElementTree as ET
 import json
@@ -99,7 +100,8 @@ def train_model():
     train_loader = get_loader(TRAIN_DIR)
     val_loader = get_loader(VAL_DIR)
 
-    model = fasterrcnn_resnet50_fpn(pretrained=True)
+    weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
+    model = fasterrcnn_resnet50_fpn(weights=weights)    
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, NUM_CLASSES)
     model.to(DEVICE)
@@ -141,10 +143,18 @@ def predict_and_save(model, split="test"):
 
             boxes = output['boxes'].cpu().numpy().tolist()
             scores = output['scores'].cpu().numpy().tolist()
+
+            # Keep predictions with confidence >= 0.5
             keep = [i for i, s in enumerate(scores) if s >= 0.5]
             filtered_boxes = [boxes[i] for i in keep]
+            filtered_scores = [scores[i] for i in keep]
 
-            pred_json = {"boxes": [[int(x) for x in box] for box in filtered_boxes]}
+            # Save both boxes and their confidence scores
+            pred_json = {
+                "boxes": [[int(x) for x in box] for box in filtered_boxes],
+                "scores": [round(float(s), 4) for s in filtered_scores]
+            }
+
             out_path = os.path.join(PRED_OUTPUT_DIR, split, names[0].replace(".tif", ".json"))
             with open(out_path, 'w') as f:
                 json.dump(pred_json, f, indent=2)
