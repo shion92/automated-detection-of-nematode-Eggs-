@@ -30,8 +30,8 @@
 		<difficult>0</difficult>
 		<bndbox>
 			<xmin>58</xmin>
-			<ymin>1125</ymin>
-			<xmax>118</xmax>
+			<ymin>1138</ymin>
+			<xmax>125</xmax>
 			<ymax>1191</ymax>
 		</bndbox>
 	</object>
@@ -93,6 +93,78 @@
 			<ymin>1151</ymin>
 			<xmax>1078</xmax>
 			<ymax>1200</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>debris</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>945</xmin>
+			<ymin>878</ymin>
+			<xmax>1038</xmax>
+			<ymax>1071</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>debris</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>1118</xmin>
+			<ymin>201</ymin>
+			<xmax>1195</xmax>
+			<ymax>308</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>debris</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>1485</xmin>
+			<ymin>268</ymin>
+			<xmax>1575</xmax>
+			<ymax>388</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>debris</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>351</xmin>
+			<ymin>165</ymin>
+			<xmax>405</xmax>
+			<ymax>308</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>debris</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>771</xmin>
+			<ymin>1035</ymin>
+			<xmax>838</xmax>
+			<ymax>1181</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>debris</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>935</xmin>
+			<ymin>675</ymin>
+			<xmax>991</xmax>
+			<ymax>751</ymax>
 		</bndbox>
 	</object>
 </annotation>

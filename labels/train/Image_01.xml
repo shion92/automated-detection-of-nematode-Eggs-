@@ -1,7 +1,7 @@
 <annotation>
-	<folder>train</folder>
+	<folder>Data</folder>
 	<filename>Image_01.tif</filename>
-	<path>/Users/shion/Desktop/COMP693/automated-detection-of-nematode-Eggs-/images/train/Image_01.tif</path>
+	<path>/Users/shion/Desktop/COMP693/automated-detection-of-nematode-Eggs-/Data/Image_01.tif</path>
 	<source>
 		<database>Unknown</database>
 	</source>
@@ -93,6 +93,18 @@
 			<ymin>618</ymin>
 			<xmax>1548</xmax>
 			<ymax>705</ymax>
+		</bndbox>
+	</object>
+	<object>
+		<name>water bubble</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>625</xmin>
+			<ymin>855</ymin>
+			<xmax>675</xmax>
+			<ymax>891</ymax>
 		</bndbox>
 	</object>
 </annotation>

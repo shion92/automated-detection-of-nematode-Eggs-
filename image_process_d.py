@@ -5,10 +5,10 @@ import os
 import json
 
 # === Setup paths ===
-image_folder = "images/train/"
+image_folder = "dataset/train/images"
 processed_dir = "Processed_Images/with_fastNIMeansDenoising/"
 steps_dir = os.path.join(processed_dir, "Steps")
-pred_json_dir = os.path.join(processed_dir, "Predictions")
+pred_json_dir = os.path.join(processed_dir, "Predictions","train")
 os.makedirs(processed_dir, exist_ok=True)
 os.makedirs(steps_dir, exist_ok=True)
 os.makedirs(pred_json_dir, exist_ok=True)

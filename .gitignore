@@ -15,6 +15,9 @@ runs/
 labels/
 Processed_Images/
 evaluation_outputs/
+dataset/
+faster_rcnn_nematode.pth
+
 
 # macOS
 .DS_Store
@@ -42,3 +45,5 @@ Network Trash Folder
 Temporary Items
 .apdisk
 man_label.py
+/labels/train
+/labels
