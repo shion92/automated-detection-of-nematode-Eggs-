@@ -8,5 +8,5 @@ labelImg
 # activate tensorboard
 pip install tensorboard
 # start tensorboard
-# in terminal
+# in terminal http://localhost:6006 
 tensorboard --logdir=runs

@@ -6,7 +6,7 @@ from glob import glob
 import numpy as np
 
 # === Configuration ===
-METHOD_NAME = "opencv/with_fastNIMeansDenoising"  # Change to "yolo", "faster_rcnn", etc. for each model
+METHOD_NAME = "faster_rcnn" #"opencv/with_fastNIMeansDenoising"  # Change to "yolo", "faster_rcnn", etc. for each model
 DATA_SPLITS = ["train", "val", "test"]
 GT_DIR_ROOT = "dataset"
 IMAGE_DIR_ROOT = "dataset"
@@ -69,7 +69,7 @@ for split in DATA_SPLITS:
         filename = os.path.basename(xml_path).replace(".xml", ".tif")
         gt_boxes = parse_voc_xml(xml_path)
 
-        json_path = os.path.join(PRED_JSON_ROOT, split, f"{os.path.splitext(filename)[0]}.json")
+        json_path = os.path.join(PRED_JSON_ROOT, split, "run1", f"{os.path.splitext(filename)[0]}.json")
         if not os.path.exists(json_path):
             print(f"⚠️ Skipping {filename}: prediction JSON not found.")
             continue

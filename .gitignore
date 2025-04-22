@@ -17,6 +17,7 @@ Processed_Images/
 evaluation_outputs/
 dataset/
 faster_rcnn_nematode.pth
+venv 2/
 
 
 # macOS
@@ -47,3 +48,4 @@ Temporary Items
 man_label.py
 /labels/train
 /labels
+*.pth
