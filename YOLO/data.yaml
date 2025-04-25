@@ -1,0 +1,10 @@
+path: /Users/shion/Desktop/COMP693/automated-detection-of-nematode-Eggs-
+train: dataset/train/images
+val: dataset/val/images
+
+nc: 1  # number of classes
+names: ['nematode_egg', 
+        # 'water_bubble', 
+        # 'debris', 
+        # 'green_grid'
+        ]

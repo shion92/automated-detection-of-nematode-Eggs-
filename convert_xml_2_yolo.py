@@ -2,19 +2,19 @@ import os
 import xml.etree.ElementTree as ET
 
 current_dir = os.getcwd()
-xml_dir = os.path.join(current_dir, "labels", "train")  
-yolo_dir = os.path.join(current_dir, "labels", "train")
+xml_dir = os.path.join(current_dir, "dataset", "test", "annotations")  
+yolo_dir = os.path.join(current_dir, "dataset", "test", "yolo_annotations")
 os.makedirs(yolo_dir, exist_ok=True)
 
 # Define class mappings 
 CLASS_MAPPING = {
     "nematode egg": 0,
-    "water bubble": 1,
-    "debris": 2,
-    "green grids": 3
+    # "water bubble": 1,  # No longer using these classes
+    # "debris": 2,        # No longer using these classes
+    # "green grids": 3    # No longer using these classes
 }
 
-# Debugging: Print absolute paths
+# Print absolute paths
 print(f"Searching for XML annotations in: {xml_dir}")
 print(f"YOLO annotations will be saved in: {yolo_dir}")
 
@@ -57,7 +57,7 @@ def convert_voc_to_yolo(xml_file):
 
                 # Check if the object class is in our predefined mapping
                 if class_name not in CLASS_MAPPING:
-                    print(f"⚠️ WARNING: Unknown class '{class_name}' in {xml_file}. Skipping!")
+                    print(f" WARNING: Unknown class '{class_name}' in {xml_file}. Skipping!")  # NEW: Skip non-nematode objects
                     continue
                 
                 class_id = CLASS_MAPPING[class_name]  # Assign the correct class ID

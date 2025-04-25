@@ -1,11 +1,7 @@
 numpy==1.26.4
 pillow==10.3.0
 tqdm==4.66.2
-# torch==2.3.1
-# torchvision==0.18.1
-# torchaudio==2.3.1
-# pip uninstall torch torchvision torchaudio
-
-torch==2.1.2 
-torchvision==0.16.2 
-torchaudio==2.1.2
+torch==2.3.1
+torchvision==0.18.1
+torchaudio==2.3.1
+opencv-python==4.9.0.80

@@ -19,3 +19,6 @@ import torch
 print("PyTorch version:", torch.__version__)
 print("Is MPS available?", torch.backends.mps.is_available())
 print("Is MPS built?", torch.backends.mps.is_built())
+
+source automated-detection-of-nematode-Eggs-/venv/bin/activate
+pip install -r requirements.txt

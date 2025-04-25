@@ -69,7 +69,7 @@ for split in DATA_SPLITS:
         filename = os.path.basename(xml_path).replace(".xml", ".tif")
         gt_boxes = parse_voc_xml(xml_path)
 
-        json_path = os.path.join(PRED_JSON_ROOT, split, "run1", f"{os.path.splitext(filename)[0]}.json")
+        json_path = os.path.join(PRED_JSON_ROOT, split, f"{os.path.splitext(filename)[0]}.json")
         if not os.path.exists(json_path):
             print(f"⚠️ Skipping {filename}: prediction JSON not found.")
             continue

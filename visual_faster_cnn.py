@@ -4,7 +4,7 @@ import json
 import xml.etree.ElementTree as ET
 
 # --- Configuration ---
-SPLIT = "test"
+SPLIT = "val"
 IMAGE_DIR = f"dataset/{SPLIT}/images"
 PRED_DIR = f"Processed_Images/faster_rcnn/Predictions/{SPLIT}"
 ANN_DIR = f"dataset/{SPLIT}/annotations"
