@@ -1,15 +1,20 @@
-import os
-print(os.path.abspath("Data"))
+# train YOLOv8 on your annotated dataset using the Ultralytics YOLO library (which supports YOLOv5–v8 models) 
+# pip install ultralytics
 
-# to train the model 
-# yolo task=detect mode=train model=yolov8s.pt data=data.yaml epochs=150 imgsz=416 augment=True lr0=0.001
+# ===  Train the model ===
+yolo task=detect mode=train model=YOLO/YOLOv5s.pt data=YOLO/data.yaml epochs=200 imgsz=416 augment=True lr0=0.001 project=YOLO name=train
+# NOTES:
+# - yolov8s.pt = good lightweight model for microscope tasks
+# - augment=True = helps model generalise
+# - imgsz=416 = better for small objects
+# - lr0=0.001 = standard; lower if model oscillates
 
-# evaluate the model
-# yolo task=detect mode=val model=runs/detect/train/weights/best.pt data=data.yaml
+# ===  Evaluate the model  ===
+yolo task=detect mode=val model=YOLO/runs/detect/train/weights/best.pt data=data.yaml
 
-# detect the model 
-yolo task=detect mode=predict model=runs/detect/train3/weights/best.pt source=images/train/
+# ===  Predict on training images (Useful for checking model overfitting) ===
+# yolo task=detect mode=predict model=YOLO/runs/detect/train3/weights/best.pt source=images/train/
+yolo task=detect mode=predict model=YOLO/runs/detect/train/weights/best.pt source=dataset/train/
 
-
-# predict the new image
-yolo task=detect mode=predict model=runs/detect/train3/weights/best.pt data=data.yaml source=Data/
+#  ===  Predict new images  ===
+yolo task=detect mode=predict model=YOLO/runs/detect/train/weights/best.pt source=dataset/test/

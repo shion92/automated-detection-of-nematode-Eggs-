@@ -28,7 +28,7 @@ def draw_legend(image):
     cv2.rectangle(image, (10, 10), (300, 90), (255, 255, 255), -1)  # white background box
     cv2.putText(image, 'Legend:', (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
     cv2.putText(image, 'Ground Truth (Blue)', (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-    cv2.putText(image, 'Prediction (Green, IoU, Conf)', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+    cv2.putText(image, 'Faster R-CNN Prediction (Green, IoU, Conf)', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
     return image
 
 def get_ground_truth_boxes(xml_path):

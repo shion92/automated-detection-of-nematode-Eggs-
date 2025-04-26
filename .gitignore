@@ -1,6 +1,6 @@
 Data/
 Jupyter Notebooks/
-Logs & Outputs/
+pdf/
 Reports/
 Reports/
 Results/
@@ -18,6 +18,16 @@ evaluation_outputs/
 dataset/
 faster_rcnn_nematode.pth
 venv 2/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.tiff
+*.csv
+*.json
+*.xml
+*.pt
+
 
 
 # macOS

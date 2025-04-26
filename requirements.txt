@@ -5,3 +5,5 @@ torch==2.3.1
 torchvision==0.18.1
 torchaudio==2.3.1
 opencv-python==4.9.0.80
+# Ultralytics YOLOv8 (latest stable as of April 2025)
+ultralytics==8.3.94
