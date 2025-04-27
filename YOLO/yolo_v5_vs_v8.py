@@ -187,12 +187,12 @@ plt.savefig(os.path.join(out_dir,'yolov_comparison_metrics_barplot.png'))
 plt.show()
 
 
-# === Create overlays for ALL test images ===
+# === Create overlays for ALL test images with legend ===
 out_vis = '../YOLO/summary/overlays'
 os.makedirs(out_vis, exist_ok=True)
 
 for name in gt:
-    # 1. find a real image file for this sample
+    # 1. find a real image file
     img_file = None
     for ext in ('.jpg', '.jpeg', '.png', '.tif'):
         candidate = os.path.join(test_img_dir, name + ext)
@@ -208,34 +208,42 @@ for name in gt:
     if img_bgr is None:
         print(f'Warning: cv2.imread failed for {img_file}, skipping.')
         continue
-    img = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
-    # 3. plot
+    # 3. draw legend on the BGR image
+    cv2.putText(img_bgr, 'Legend:',                  (20, 30),  cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0),   1)
+    cv2.putText(img_bgr, 'Ground Truth (Blue)',      (20, 50),  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+    cv2.putText(img_bgr, 'YOLOv5 Prediction (Red)',   (20, 70),  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+    cv2.putText(img_bgr, 'YOLOv8 Prediction (Green)', (20, 90),  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+    # 4. convert to RGB for matplotlib
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+    # 5. plot image + boxes
     plt.figure(figsize=(8,8))
-    plt.imshow(img)
+    plt.imshow(img_rgb)
     ax = plt.gca()
 
-    # 4. GT in blue
+    # ground truth in blue
     for b in gt[name]:
         rect = plt.Rectangle((b[0], b[1]), b[2]-b[0], b[3]-b[1],
                              fill=False, edgecolor='blue', linewidth=2)
         ax.add_patch(rect)
 
-    # 5. YOLOv5 preds in red (handle either box-only or (box,conf))
+    # YOLOv5 preds in red
     for item in pred5.get(name, []):
         box = item[0] if isinstance(item, (list,tuple)) and len(item)==2 else item
         rect = plt.Rectangle((box[0], box[1]), box[2]-box[0], box[3]-box[1],
                              fill=False, edgecolor='red', linewidth=2)
         ax.add_patch(rect)
 
-    # 6. YOLOv8 preds in green
+    # YOLOv8 preds in green
     for item in pred8.get(name, []):
         box = item[0] if isinstance(item, (list,tuple)) and len(item)==2 else item
         rect = plt.Rectangle((box[0], box[1]), box[2]-box[0], box[3]-box[1],
                              fill=False, edgecolor='green', linewidth=2)
         ax.add_patch(rect)
 
-    plt.title(f'{name}: GT (blue) | v5 (red) | v8 (green)')
+    plt.title(f'{name}')
     plt.axis('off')
     plt.tight_layout()
     plt.savefig(os.path.join(out_vis, f'{name}_overlay.png'))
