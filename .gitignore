@@ -67,3 +67,5 @@ yolov5/
 /DeepLab
 requirements.txt
 .zshrc
+/verification_vis
+verify_open_metric.py

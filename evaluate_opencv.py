@@ -1,3 +1,5 @@
+# evaluate_opencv.py
+
 import os
 import glob
 import json
@@ -11,7 +13,7 @@ from pycocotools.cocoeval import COCOeval
 # ─── CONFIG ───────────────────────────────────────────────────────────────────
 SPLIT = "train"  # or "val", "test"
 GT_ANNOTATIONS = f"dataset/{SPLIT}/annotations"
-PRED_JSON_DIR  = f"/Users/shion/Desktop/COMP693/automated-detection-of-nematode-Eggs-/Processed_Images/faster_rcnn/Predictions/{SPLIT}"
+PRED_JSON_DIR  = f"Processed_Images/opencv/with_fastNIMeansDenoising 2/Predictions/{SPLIT}"
 COCO_GT_JSON   = f"coco_gt_{SPLIT}.json"
 COCO_PRED_JSON = f"coco_pred_{SPLIT}.json"
 # ──────────────────────────────────────────────────────────────────────────────
@@ -29,8 +31,8 @@ def voc_to_coco(gt_dir, out_json):
         for obj in root.findall("object"):
             bbox = obj.find("bndbox")
             x1, y1 = float(bbox.findtext("xmin")), float(bbox.findtext("ymin"))
-            x2, y2 = float(bbox.findtext("xmax")), float(bbox.findtext("ymax"))
-            w_box, h_box = x2-x1, y2-y1
+            x2, y2 = float(bbox.find("xmax").text), float(bbox.find("ymax").text)
+            w_box, h_box = x2 - x1, y2 - y1
             annotations.append({
                 "id": ann_id,
                 "image_id": img_id,
@@ -41,10 +43,14 @@ def voc_to_coco(gt_dir, out_json):
             })
             ann_id += 1
 
-    coco = {"images": images, "annotations": annotations, "categories": [{"id":1,"name":"egg"}]}
+    coco = {
+        "images": images,
+        "annotations": annotations,
+        "categories": [{"id":1,"name":"egg"}]
+    }
     with open(out_json, "w") as f:
         json.dump(coco, f)
-    print(f"[+] Wrote {len(images)} images and {len(annotations)} GT boxes → {out_json}")
+    print(f"Wrote {len(images)} images and {len(annotations)} GT boxes - {out_json}")
 
 def preds_to_coco(pred_dir, gt_json, out_json):
     coco = COCO(gt_json)
@@ -55,20 +61,19 @@ def preds_to_coco(pred_dir, gt_json, out_json):
         if not os.path.exists(pj):
             continue
         data = json.load(open(pj))
-        boxes  = data.get("boxes", [])
-        scores = data.get("scores", [1.0]*len(boxes))
-        for box, score in zip(boxes, scores):
+        boxes = data.get("boxes", [])
+        for box in boxes:
             x1, y1, x2, y2 = box
             w, h = x2 - x1, y2 - y1
             pred_list.append({
                 "image_id": img["id"],
                 "category_id": 1,
                 "bbox": [x1, y1, w, h],
-                "score": float(score)
+                "score": 1.0
             })
     with open(out_json, "w") as f:
         json.dump(pred_list, f)
-    print(f"[+] Wrote {len(pred_list)} detections → {out_json}")
+    print(f"Wrote {len(pred_list)} detections - {out_json}")
 
 def run_coco_eval(gt_json, pred_json):
     coco_gt = COCO(gt_json)
@@ -77,7 +82,10 @@ def run_coco_eval(gt_json, pred_json):
     coco_eval.evaluate()
     coco_eval.accumulate()
     coco_eval.summarize()
-    return {"mAP@0.50:0.95": coco_eval.stats[0], "mAP@0.50": coco_eval.stats[1]}
+    return {
+        "mAP@0.50:0.95": coco_eval.stats[0],
+        "mAP@0.50":     coco_eval.stats[1]
+    }
 
 def main():
     voc_to_coco(GT_ANNOTATIONS, COCO_GT_JSON)
@@ -88,42 +96,43 @@ def main():
             pred_list = json.load(f)
     except FileNotFoundError:
         pred_list = []
-    
+
     if not pred_list:
         print("[!] No detections found; skipping COCO evaluation.")
         coco_metrics = {"mAP@0.50:0.95": 0.0, "mAP@0.50": 0.0}
     else:
         coco_metrics = run_coco_eval(COCO_GT_JSON, COCO_PRED_JSON)
-        
+
     print("\n>> COCO-style metrics:")
-    for k,v in coco_metrics.items():
+    for k, v in coco_metrics.items():
         print(f"   {k:12s}: {v:.4f}")
 
-    # Precision / Recall / F1 @ IoU=0.5
-    def iou(a,b):
-        xa1,ya1,xa2,ya2 = a; xb1,yb1,xb2,yb2 = b
-        xi1, yi1 = max(xa1,xb1), max(ya1,yb1)
-        xi2, yi2 = min(xa2,xb2), min(ya2,yb2)
+    # ─── Precision / Recall / F1 @ IoU=0.5 ────────────────────────────────────
+    def iou(a, b):
+        xa1, ya1, xa2, ya2 = a
+        xb1, yb1, xb2, yb2 = b
+        xi1, yi1 = max(xa1, xb1), max(ya1, yb1)
+        xi2, yi2 = min(xa2, xb2), min(ya2, yb2)
         inter = max(0, xi2-xi1) * max(0, yi2-yi1)
         area_a = (xa2-xa1)*(ya2-ya1)
         area_b = (xb2-xb1)*(yb2-yb1)
         union = area_a + area_b - inter
-        return inter/union if union>0 else 0
+        return inter/union if union > 0 else 0
 
-    # load GT
+    # Load GT
     gt_data = json.load(open(COCO_GT_JSON))
     gt = defaultdict(list)
     for ann in gt_data["annotations"]:
-        x,y,w,h = ann["bbox"]
-        gt[ann["image_id"]].append([x,y,x+w,y+h])
+        x, y, w, h = ann["bbox"]
+        gt[ann["image_id"]].append([x, y, x+w, y+h])
 
-    # load detections
-    preds = json.load(open(COCO_PRED_JSON))
+    # Load preds
     dt = defaultdict(list)
-    for det in preds:
-        x,y,w,h = det["bbox"]
-        dt[det["image_id"]].append([x,y,x+w,y+h])
+    for det in pred_list:
+        x, y, w, h = det["bbox"]
+        dt[det["image_id"]].append([x, y, x+w, y+h])
 
+    # Compute TP, FP, FN
     TP = FP = FN = 0
     for img_id in set(gt) | set(dt):
         gts = gt.get(img_id, [])
@@ -143,9 +152,19 @@ def main():
                 FP += 1
         FN += len(gts) - len(matched)
 
+    total_gt   = sum(len(v) for v in gt.values())
+    total_pred = sum(len(v) for v in dt.values())
+
     precision = TP / (TP+FP) if TP+FP else 0
     recall    = TP / (TP+FN) if TP+FN else 0
     f1        = 2*precision*recall/(precision+recall) if (precision+recall) else 0
+
+    print("\n>> Counts:")
+    print(f"   Total GT boxes     : {total_gt}")
+    print(f"   Total Pred boxes   : {total_pred}")
+    print(f"   True Positives (TP): {TP}")
+    print(f"   False Positives(FP): {FP}")
+    print(f"   False Negatives(FN): {FN}")
 
     print("\n>> Detection metrics @ IoU=0.5:")
     print(f"   Precision : {precision:.4f}")
