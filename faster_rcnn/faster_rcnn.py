@@ -9,6 +9,9 @@ from PIL import Image
 import torchvision
 from torchvision.models.detection import fasterrcnn_resnet50_fpn
 from torchvision.models.detection import FasterRCNN_ResNet50_FPN_Weights
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+from albumentations.core.composition import Compose
 from torchvision.transforms import functional as F
 import xml.etree.ElementTree as ET
 from tqdm import tqdm # progress bars
@@ -25,6 +28,7 @@ TRAIN_DIR = "dataset/train"
 VAL_DIR = "dataset/val"
 TEST_DIR = "dataset/test"
 PRED_OUTPUT_DIR = "Processed_Images/faster_rcnn/Predictions"
+num_epochs = 20
 
 # -------------------------
 # Reproducibility
@@ -37,6 +41,23 @@ def set_seed(seed=42):
         torch.mps.manual_seed(seed)
 
 # -------------------------
+#  Albumentations pipeline
+# -------------------------
+def get_train_transforms():
+    return A.Compose([
+        A.HorizontalFlip(p=0.5),
+        A.RandomRotate90(p=0.5),
+        A.RandomResizedCrop(height=512, width=512, scale=(0.8, 1.2), p=0.7),
+        A.GaussNoise(var_limit=(10.0, 50.0), p=0.3),
+        A.Blur(blur_limit=3, p=0.2),
+        A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=0.5),
+        A.Normalize(mean=(0,0,0), std=(1,1,1)),
+        ToTensorV2()
+    ],
+    bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
+
+
+# -------------------------
 # Dataset
 # -------------------------
 class VOCDataset(Dataset):
@@ -47,13 +68,14 @@ class VOCDataset(Dataset):
         self.images = sorted([f for f in os.listdir(image_dir) if f.endswith('.tif')])
 
     def __getitem__(self, idx):
+        # load image and annotation
         image_id = self.images[idx]
         img_path = os.path.join(self.image_dir, image_id)
         ann_path = os.path.join(self.annotation_dir, image_id.replace('.tif', '.xml'))
         
+        # Parse boxes and labels as Python lists
         img = Image.open(img_path).convert("RGB")
         boxes, labels = [], []
-
         tree = ET.parse(ann_path)
         root = tree.getroot()
         for obj in root.findall("object"):
@@ -62,36 +84,61 @@ class VOCDataset(Dataset):
                 continue
             bnd = obj.find("bndbox")
             box = [int(bnd.find("xmin").text), int(bnd.find("ymin").text),
-                   int(bnd.find("xmax").text), int(bnd.find("ymax").text)]
+                int(bnd.find("xmax").text), int(bnd.find("ymax").text)]
             
-            # Reject invalid boxes
-            if box[2] <= box[0] or box[3] <= box[1]:
-                print(f"⚠️ Invalid box in {image_id}: {box}")
-                continue
+            # # Reject invalid boxes
+            # if box[2] <= box[0] or box[3] <= box[1]:
+            #     print(f"⚠️ Invalid box in {image_id}: {box}")
+            #     continue
             
             boxes.append(box)
-            labels.append(1)
+            labels.append(1) # “nematode egg” → class 1
 
         if len(boxes) == 0:
             print(f"⚠️ Skipping image with no valid boxes: {image_id}")
             return None  # Skip invalid sample
-
-        boxes = torch.tensor(boxes, dtype=torch.float32)
-        labels = torch.tensor(labels, dtype=torch.int64)
+        
+        # Convert boxes and labels to tensors
+        boxes = torch.tensor(boxes, dtype=torch.float32).view(-1, 4)
+        labels = torch.tensor(labels, dtype=torch.int64).view(-1)
+        
+        # Make sure we have shape [N,4], even if N==1
         if boxes.ndim == 1:
-            boxes = boxes.unsqueeze(0)
-
+                boxes = boxes.unsqueeze(0)
+        
         target = {
-            'boxes': boxes,
-            'labels': labels,
-            'image_id': torch.tensor([idx]),
-            'area': (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0]),
-            'iscrowd': torch.zeros((len(labels),), dtype=torch.int64)
-        }
+                'boxes': boxes,
+                'labels': labels,
+                'image_id': torch.tensor([idx]),
+                'area': (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0]),
+                'iscrowd': torch.zeros((len(labels),), dtype=torch.int64)
+            }
+        
+        # Apply transformations
 
-        if self.transforms:
+        # Check Albumentations vs F.to_tensor
+        if isinstance(self.transforms, Compose):
+            # Albumentations expects numpy arrays
+            img_np = np.array(img)
+            # format bboxes for Albumentations
+            bboxes = [box for box in target['boxes'].tolist()]
+            labels = target['labels'].tolist()
+            
+            augmented = self.transforms(image=img_np, bboxes=bboxes, labels=labels)
+            img = augmented['image']
+            # rebuild target from augmented bboxes
+            target['boxes']  = torch.tensor(augmented['bboxes'], dtype=torch.float32).view(-1, 4)
+            target['labels'] = torch.tensor(augmented['labels'], dtype=torch.int64).view(-1)
+            
+            target['area']    = (target['boxes'][:,3] - target['boxes'][:,1]) * (target['boxes'][:,2] - target['boxes'][:,0])
+            target['iscrowd']= torch.zeros((len(target['labels']),), dtype=torch.int64)
+
+        elif callable(self.transforms):
             img = self.transforms(img)
-
+        else:
+            # no transform
+            img = F.to_tensor(img)
+        
         return img, target, image_id
 
 
@@ -101,11 +148,11 @@ class VOCDataset(Dataset):
 # -------------------------
 # Loaders
 # -------------------------
-def get_loader(root, batch_size=2):
+def get_loader(root, batch_size=2, transforms=F.to_tensor):
     dataset = VOCDataset(
         image_dir=os.path.join(root, "images"),
         annotation_dir=os.path.join(root, "annotations"),
-        transforms=F.to_tensor
+        transforms=transforms
     )
     
     # Modified collate function to skip None
@@ -118,11 +165,11 @@ def get_loader(root, batch_size=2):
 # -------------------------
 # Training Loop
 # -------------------------
-def train_model():
+def train_model(num_epochs):
     set_seed()
 
-    train_loader = get_loader(TRAIN_DIR)
-    val_loader = get_loader(VAL_DIR)
+    train_loader = get_loader(TRAIN_DIR, transforms=get_train_transforms()) # apply Albumentations on train only
+    val_loader = get_loader(VAL_DIR) # uses default F.to_tensor
 
     weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
     model = fasterrcnn_resnet50_fpn(weights=weights)    
@@ -130,16 +177,16 @@ def train_model():
     model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, NUM_CLASSES)
     model.to(DEVICE)
 
-    print(f" Using device: {DEVICE}")
+    print(f"=== Using device: {DEVICE} ")
 
     params = [p for p in model.parameters() if p.requires_grad]
     optimizer = torch.optim.SGD(params, lr=0.001, momentum=0.9, weight_decay=0.0005)
 
     torch.autograd.set_detect_anomaly(True)
     best_val_loss = float('inf')
-    num_epochs = 20
-    print(f"Training on {len(train_loader.dataset)} training samples and {len(val_loader.dataset)} validation samples.")
-    print(f"Optimizer: {optimizer.__class__.__name__}")
+    
+    print(f"===Training on {len(train_loader.dataset)} training samples and {len(val_loader.dataset)} validation samples. ===")
+    print(f"Optimizer: {optimizer.__class__.__name__} ===")
 
     for epoch in range(num_epochs):
         model.train()
@@ -192,7 +239,7 @@ def train_model():
                 val_loss += sum(loss for loss in loss_dict.values()).item()
 
         avg_val_loss = val_loss / len(val_loader)
-        print(f"   🔍 Validation Loss: {avg_val_loss:.4f}")
+        print(f"   Validation Loss: {avg_val_loss:.4f}")
 
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
@@ -248,8 +295,8 @@ def predict_and_save(model, split="test"):
 if __name__ == "__main__":
     start_time = time.time()
 
-    print("🚀 Starting training...")
-    model = train_model()
+    print("=== Starting training... ===")
+    model = train_model(num_epochs=num_epochs)
 
     for split in ["test", "val", "train"]:
         print(f"\n Running inference on {split} set...")

@@ -23,3 +23,6 @@ timm==0.9.2
 # Evaluation dependencies
 pycocotools>=2.0.6
 matplotlib>=3.7.0
+
+# Data augmentation for Faster R-CNN
+albumentations==1.4.0

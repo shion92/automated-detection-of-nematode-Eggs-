@@ -3,7 +3,20 @@ import cv2
 import json
 import xml.etree.ElementTree as ET
 
-# --- Configuration ---
+# -------------------------
+# this script evaluate the predictions of Faster R-CNN/YOLO for the following:
+# -------------------------
+# Ground-truth loader (from Pascal-VOC XMLs)
+# Prediction loader (from your JSONs)
+# IoU matching & TP/FP/FN logic
+# Precision, Recall, F1 at a fixed threshold
+# Precision–Recall curve and AUC-PR
+# COCO mAP@0.5 and mAP@[.5:.95]
+
+
+# -------------------------
+# Configuration
+# -------------------------
 SPLIT = "val"
 IMAGE_DIR = f"dataset/{SPLIT}/images"
 PRED_DIR = f"Processed_Images/faster_rcnn/Predictions/{SPLIT}"
@@ -11,7 +24,9 @@ ANN_DIR = f"dataset/{SPLIT}/annotations"
 VIS_DIR = f"Processed_Images/faster_rcnn/Predictions/{SPLIT}"
 os.makedirs(VIS_DIR, exist_ok=True)
 
-# --- IoU helper ---
+# -------------------------
+# IoU Helper
+# -------------------------
 def compute_iou(box1, box2):
     xA = max(box1[0], box2[0])
     yA = max(box1[1], box2[1])
@@ -67,7 +82,9 @@ def draw_boxes(image_path, pred_boxes, pred_scores, gt_boxes):
 
     return draw_legend(img)
 
-# --- Main Visualisation Loop ---
+# -------------------------
+#  Main Visualisation Loop
+# -------------------------
 image_files = [f for f in os.listdir(IMAGE_DIR) if f.endswith('.tif')]
 
 for img_name in image_files:

@@ -6,7 +6,7 @@ from glob import glob
 import numpy as np
 
 # === Configuration ===
-METHOD_NAME = "faster_rcnn" #"opencv/with_fastNIMeansDenoising"  # Change to "yolo", "faster_rcnn", etc. for each model
+METHOD_NAME = "yolo" #"opencv/with_fastNIMeansDenoising"  # Change to "yolo", "faster_rcnn", etc. for each model
 DATA_SPLITS = ["train", "val", "test"]
 GT_DIR_ROOT = "dataset"
 IMAGE_DIR_ROOT = "dataset"
@@ -140,7 +140,7 @@ for split in DATA_SPLITS:
         "Total FN": all_fn,
         "Precision": round(all_tp / (all_tp + all_fp), 4) if (all_tp + all_fp) > 0 else 0,
         "Recall": round(all_tp / (all_tp + all_fn), 4) if (all_tp + all_fn) > 0 else 0,
-        "F1": round(2 * all_tp * all_tp / ((all_tp + all_fp) * (all_tp + all_fn) + 1e-6), 4),
+        "F1": round((2 * all_tp) / (2 * all_tp + all_fp + all_fn + 1e-6), 4),
         "Mean IoU": round(np.mean(all_ious), 4) if all_ious else 0
     }
 
