@@ -69,3 +69,5 @@ requirements.txt
 .zshrc
 /verification_vis
 verify_open_metric.py
+faster_rcnn/cv_loss.xlsx
+faster_rcnn/~$cv_loss.xlsx
