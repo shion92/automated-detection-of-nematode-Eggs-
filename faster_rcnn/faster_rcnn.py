@@ -7,8 +7,13 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 import torchvision
-from torchvision.models.detection import fasterrcnn_resnet50_fpn
-from torchvision.models.detection import FasterRCNN_ResNet50_FPN_Weights
+
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection import fasterrcnn_resnet50_fpn, FasterRCNN_ResNet50_FPN_Weights # use by fasterrcnn_resnet50_fpn
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
+from torchvision.models import ResNet34_Weights
+
+
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from albumentations.core.composition import Compose
@@ -27,7 +32,7 @@ CLASS_NAMES = ["__background__", "nematode egg"]
 TRAIN_DIR = "dataset/train"
 VAL_DIR = "dataset/val"
 TEST_DIR = "dataset/test"
-PRED_OUTPUT_DIR = "Processed_Images/faster_rcnn/Predictions"
+PRED_OUTPUT_DIR = "Processed_Images/faster_rcnn_ResNet-34/Predictions"
 num_epochs = 20
 
 # -------------------------
@@ -171,10 +176,15 @@ def train_model(num_epochs):
     train_loader = get_loader(TRAIN_DIR, transforms=get_train_transforms()) # apply Albumentations on train only
     val_loader = get_loader(VAL_DIR) # uses default F.to_tensor
 
-    weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
-    model = fasterrcnn_resnet50_fpn(weights=weights)    
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, NUM_CLASSES)
+    # weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
+    # model = fasterrcnn_resnet50_fpn(weights=weights)    
+    # in_features = model.roi_heads.box_predictor.cls_score.in_features
+    # model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, NUM_CLASSES)
+    
+    backbone = resnet_fpn_backbone('resnet34', weights=ResNet34_Weights.DEFAULT)
+    model    = FasterRCNN(backbone, num_classes=NUM_CLASSES)
+    
+    
     model.to(DEVICE)
 
     print(f"=== Using device: {DEVICE} ")

@@ -25,9 +25,9 @@ from tqdm import tqdm
 # -------------------------
 SPLIT = "val"
 IMAGE_DIR = f"dataset/{SPLIT}/images"
-PRED_DIR = f"Processed_Images/faster_rcnn/Predictions/{SPLIT}"
+PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn/Predictions/{SPLIT}"
+# PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn_ResNet-34/Predictions/{SPLIT}"
 ANN_DIR = f"dataset/{SPLIT}/annotations"
-VIS_DIR = f"Processed_Images/faster_rcnn/Predictions/{SPLIT}"
 os.makedirs(VIS_DIR, exist_ok=True)
 IOU_THRESH = 0.5
 
@@ -180,11 +180,30 @@ def write_coco_preds(preds, out_path):
     with open(out_path,"w") as f:
         json.dump(coco_results, f)
 
-def compute_coco_map(gt_json, pred_json):
+def compute_coco_map(gt_json, pred_json, out_json=None):
     coco_gt = COCO(gt_json)
     coco_dt = coco_gt.loadRes(pred_json)
     evaler = COCOeval(coco_gt, coco_dt, "bbox")
     evaler.evaluate(); evaler.accumulate(); evaler.summarize()
+    
+    stats = evaler.stats       # works whether stats is list or ndarray
+
+    # 4. If requested, dump them to JSON
+    if out_json:
+        keys = [
+            "AP@[.50:.95]_all",   "AP@.50_all",    "AP@.75_all",
+            "AP@[.50:.95]_small", "AP@[.50:.95]_medium", "AP@[.50:.95]_large",
+            "AR@[.50:.95]_maxDets1",  "AR@[.50:.95]_maxDets10",
+            "AR@[.50:.95]_maxDets100",
+            "AR@[.50:.95]_small", "AR@[.50:.95]_medium", "AR@[.50:.95]_large"
+        ]
+        metrics = dict(zip(keys, stats))
+
+        with open(out_json, "w") as f:
+            json.dump(metrics, f, indent=2)
+        print(f"✅ Saved COCO metrics to {out_json}")
+
+    return stats
 
 # -------------------------
 # 7a) Visualisation
@@ -235,20 +254,36 @@ if __name__ == "__main__":
     precs, recs, threshs, aucpr = compute_pr_curve(scores, labels)
     print(f"AUC-PR: {aucpr:.3f}")
     
+    pr_path   = os.path.join(VIS_DIR, "pr_data.json")
     # 7.3.1 Write out raw PR data for plotting
     pr_data = {
         "scores": scores.tolist(),
         "labels": labels.tolist(),
-        "auc_pr": float(aucpr)
+        "auc_pr": float(aucpr),
+        "precisions": precs.tolist(),
+        "recalls": recs.tolist(),
+        "thresholds": threshs.tolist(),
+        "precision": float(P),
+        "recall": float(R),
+        "f1": float(F1),
+        "iou_thresh": IOU_THRESH,
+        "conf_thresh": 0.5,
     }
-    with open("pr_data.json", "w") as f:
+    with open(pr_path, "w") as f:
         json.dump(pr_data, f, indent=2)
     print("✅ Saved PR data to pr_data.json")
 
     # 7.4 Write COCO files & compute mAP
-    write_coco_gt(gt,    "gt_coco.json")
-    write_coco_preds(preds, "preds_coco.json")
-    compute_coco_map("gt_coco.json", "preds_coco.json")
+    gt_path   = os.path.join(VIS_DIR, "gt_coco.json")
+    pred_path = os.path.join(VIS_DIR, "preds_coco.json")
+    coco_path = os.path.join(VIS_DIR, "coco_metrics.json")
+    
+    write_coco_gt(gt,    gt_path)
+    write_coco_preds(preds, pred_path)
+    compute_coco_map(gt_path, pred_path, out_json = coco_path)
+    
+    print(f"✅ Saved GT to {gt_path}")
+    print(f"✅ Saved predictions to {pred_path}")   
     
 # -------------------------
 #  Main Visualisation Loop
