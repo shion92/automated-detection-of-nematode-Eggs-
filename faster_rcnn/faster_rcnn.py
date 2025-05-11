@@ -266,7 +266,7 @@ def train_model(num_epochs):
             best_val_loss = avg_val_loss
             fname = f"faster_rcnn_nematode_{backbone_name}_best.pth"
             out_path = os.path.join(SAVE_DIR, fname)
-            torch.save(model.state_dict(), f"faster_rcnn_nematode_{backbone_name}_best.pth")
+            torch.save(model.state_dict(), out_path)
             print(f"   ✅ New best model saved! (val loss: {best_val_loss:.4f})")
 
     return model
