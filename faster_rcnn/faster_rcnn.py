@@ -34,6 +34,10 @@ VAL_DIR = "dataset/val"
 TEST_DIR = "dataset/test"
 PRED_OUTPUT_DIR = "Processed_Images/faster_rcnn_ResNet-34/Predictions"
 num_epochs = 20
+backbone_name = "resnet50"  # Backbone model
+SAVE_DIR = f"model/{backbone_name}"
+os.makedirs(SAVE_DIR, exist_ok=True)
+os.makedirs(PRED_OUTPUT_DIR, exist_ok=True)
 
 # -------------------------
 # Reproducibility
@@ -176,15 +180,22 @@ def train_model(num_epochs):
     train_loader = get_loader(TRAIN_DIR, transforms=get_train_transforms()) # apply Albumentations on train only
     val_loader = get_loader(VAL_DIR) # uses default F.to_tensor
 
-    # weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
-    # model = fasterrcnn_resnet50_fpn(weights=weights)    
-    # in_features = model.roi_heads.box_predictor.cls_score.in_features
-    # model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, NUM_CLASSES)
+    if backbone_name == "resnet50":
+        # Use pre-trained FasterRCNN with ResNet50 backbone
+        weights = FasterRCNN_ResNet50_FPN_Weights.DEFAULT
+        model = fasterrcnn_resnet50_fpn(weights=weights)
+        
+    elif backbone_name == "resnet34":
+        # Use pre-trained FasterRCNN with ResNet34 backbone
+        # build a ResNet-34 + FPN backbone (pretrained on ImageNet)
+        backbone_net = resnet_fpn_backbone('resnet34', pretrained=True)
+        # plug it into the Faster R-CNN head
+        model = FasterRCNN(backbone_net) 
+    else:
+        raise ValueError(f"Unsupported backbone: {backbone_name}. Use 'resnet50' or 'resnet34'.")
     
-    backbone = resnet_fpn_backbone('resnet34', weights=ResNet34_Weights.DEFAULT)
-    model    = FasterRCNN(backbone, num_classes=NUM_CLASSES)
-    
-    
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, NUM_CLASSES)
     model.to(DEVICE)
 
     print(f"=== Using device: {DEVICE} ")
@@ -253,7 +264,9 @@ def train_model(num_epochs):
 
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            torch.save(model.state_dict(), "faster_rcnn_nematode_best.pth")
+            fname = f"faster_rcnn_nematode_{backbone_name}_best.pth"
+            out_path = os.path.join(SAVE_DIR, fname)
+            torch.save(model.state_dict(), f"faster_rcnn_nematode_{backbone_name}_best.pth")
             print(f"   ✅ New best model saved! (val loss: {best_val_loss:.4f})")
 
     return model
