@@ -1,0 +1,33 @@
+# Labeling Instructions for DeepLab Training
+
+Follow these steps to label images for training the DeepLab model for nematode egg detection:
+
+## Step-by-Step Instructions
+
+1. **Launch the Labeling Tool**  
+    Open a terminal and run the following command to launch the labeling tool:  
+    ```bash
+    labelImg
+    ```
+
+2. **Select the Image Folder**  
+    In the `labelImg` interface, choose the folder containing the images you want to label.
+
+3. **Start Labeling**  
+    - Click the **'Create Polygons'** button to begin labeling.  
+    - Carefully draw polygons around the nematode eggs in the images.  
+    - Use zoom (Ctrl + scroll up) for better precision.
+
+4. **Maintain Consistent Labels**  
+    - Assign the label **`nematode egg`** to all identified nematode eggs.  
+    - Ensure the label name is consistent across all images, as inconsistent labels will be treated as separate classes by the model.
+
+5. **Save the Annotations**  
+    - After labeling, click the **'Save'** button.  
+    - Annotation files will be saved automatically in `.json` format in the same directory as the images.
+
+## Notes
+- Consistency in labeling is crucial for accurate model training.  
+- Ensure all polygons are tightly drawn around the nematode eggs to improve model performance.
+
+If you have any questions or need further assistance, feel free to reach out to Jacquelin Ruan at shionshine@gmail.com.

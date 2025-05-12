@@ -64,7 +64,6 @@ yolov5/
 /YOLO/nematode_yolov5s
 /YOLO/nematode_yolov5s_train
 /YOLO/nematode_yolov5s
-/DeepLab
 requirements.txt
 .zshrc
 /verification_vis
