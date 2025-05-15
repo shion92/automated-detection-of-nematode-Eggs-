@@ -28,7 +28,6 @@ IMAGE_DIR = f"dataset/{SPLIT}/images"
 PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn/Predictions/{SPLIT}"
 # PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn_ResNet-34/Predictions/{SPLIT}"
 ANN_DIR = f"dataset/{SPLIT}/annotations"
-os.makedirs(VIS_DIR, exist_ok=True)
 IOU_THRESH = 0.5
 
 # -------------------------

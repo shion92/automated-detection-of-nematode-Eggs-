@@ -9,6 +9,7 @@ from PIL import Image
 SPLIT = ["train", "val", "test"]  # add "test" if needed
 OUT_MASK_DIR = IMAGE_ROOT = "dataset"
 TARGET_LABEL = "nematode egg"
+VALID_EXTS = {".jpg", ".jpeg", ".png", ".tif", ".tiff"}
 
 # -------------------------
 # Labelme JSON to Mask Conversion
@@ -42,29 +43,29 @@ def convert_labelme_to_mask(json_path, img_shape, target_label):
 # -------------------------
 for split in SPLIT:
     img_dir = os.path.join(IMAGE_ROOT, split, "images")
+    mask_out_dir = os.path.join(OUT_MASK_DIR, split, "masks")
     if not os.path.exists(img_dir):
         print(f"⚠️ Skipping {split} (directory not found)")
         continue
     print(f"Processing {split}...")
-    mask_out_dir = os.path.join(OUT_MASK_DIR, split, "masks")
     os.makedirs(mask_out_dir, exist_ok=True)
 
     for fname in os.listdir(img_dir):
-        if not fname.endswith(".json"):
+        base, ext = os.path.splitext(fname)
+        if ext.lower() not in VALID_EXTS:
             continue
 
-        base = fname.replace(".json", "")
-        img_path = os.path.join(img_dir, base + ".tif")
-        json_path = os.path.join(img_dir, fname)
-
-        if not os.path.exists(img_path):
-            print(f"⚠️ Skipping {base} (image not found)")
-            continue
+        img_path  = os.path.join(img_dir, fname)
+        json_path = os.path.join(img_dir, base + ".json")
 
         img = Image.open(img_path).convert("RGB")
         img_np = np.array(img)
+        
+        if os.path.exists(json_path):
+            mask = convert_labelme_to_mask(json_path, img_np.shape, TARGET_LABEL)
+        else:
+            mask = np.zeros(img_np.shape[:2], dtype=np.uint8)
 
-        mask = convert_labelme_to_mask(json_path, img_np.shape, TARGET_LABEL)
         mask_out_path = os.path.join(mask_out_dir, base + ".png")
         Image.fromarray(mask).save(mask_out_path)
         print(f"✅ Saved mask: {mask_out_path}")
