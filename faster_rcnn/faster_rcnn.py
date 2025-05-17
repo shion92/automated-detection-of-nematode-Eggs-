@@ -35,6 +35,7 @@ TEST_DIR = "dataset/test"
 PRED_OUTPUT_DIR = "Processed_Images/faster_rcnn_ResNet-34/Predictions"
 num_epochs = 20
 backbone_name = "resnet50"  # Backbone model
+IMG_SIZE = 512  # Resize images to (512,512)
 SAVE_DIR = f"model/{backbone_name}"
 os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(PRED_OUTPUT_DIR, exist_ok=True)
@@ -56,7 +57,7 @@ def get_train_transforms():
     return A.Compose([
         A.HorizontalFlip(p=0.5),
         A.RandomRotate90(p=0.5),
-        A.RandomResizedCrop(height=512, width=512, scale=(0.8, 1.2), p=0.7),
+        A.RandomResizedCrop(height=IMG_SIZE, width=IMG_SIZE, scale=(0.8, 1.2), p=0.7),
         A.GaussNoise(var_limit=(10.0, 50.0), p=0.3),
         A.Blur(blur_limit=3, p=0.2),
         A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=0.5),
@@ -65,6 +66,12 @@ def get_train_transforms():
     ],
     bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
 
+def get_val_transforms():
+    return A.Compose([
+        A.Resize(IMG_SIZE, IMG_SIZE),
+        A.Normalize(),
+        ToTensorV2(),
+    ])
 
 # -------------------------
 # Dataset
@@ -320,6 +327,7 @@ if __name__ == "__main__":
     print("=== Starting training... ===")
     model = train_model(num_epochs=num_epochs)
 
+    print("=== Running predictions... ===")
     for split in ["test", "val", "train"]:
         print(f"\n Running inference on {split} set...")
         predict_and_save(model, split=split)

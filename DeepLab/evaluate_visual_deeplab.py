@@ -22,11 +22,14 @@ from tqdm import tqdm
 # -------------------------
 # Configuration
 # -------------------------
-SPLIT = "val"
+SPLIT = "test"
 IMAGE_DIR = f"dataset/{SPLIT}/images"
-VIS_DIR = PRED_DIR = f"Processed_Images/deeplab/Predictions/{SPLIT}"
+PRED_DIR = f"Processed_Images/deeplab/Predictions/{SPLIT}"
+VIS_DIR = f"Processed_Images/deeplab/Predictions/{SPLIT}"
+EVAL_DIR = f"evaluation/deeplab/{SPLIT}"
+os.makedirs(EVAL_DIR, exist_ok=True)
 GT_MASK_DIR  = f"dataset/{SPLIT}/masks"
-THRESH = 0.5   # binarisation threshold for predicted masks
+THRESH = 0.3   # binarisation threshold for predicted masks
 
 # -------------------------
 # IoU Helper 
@@ -54,8 +57,12 @@ def load_predictions(pred_dir):
     preds = {}
     for jf in glob(os.path.join(pred_dir, "*.json")):
         name = os.path.basename(jf).replace(".json", "")
-        obj  = json.load(open(jf))
-        pm   = np.array(obj["mask"], dtype=np.uint8)
+        obj = json.load(open(jf))
+        if "mask" not in obj:
+            raise KeyError(
+                f"No 'mask' key in {jf}; found keys: {list(obj.keys())}"
+            )
+        pm = np.array(obj["mask"], dtype=np.uint8)
         preds[name] = (pm > 0).astype(np.uint8)
     return preds
 
@@ -79,6 +86,11 @@ def evaluate_threshold(gt, preds, thresh):
     all_scores, all_labels = [], []
     for name, gt_mask in gt.items():
         pm = preds.get(name, np.zeros_like(gt_mask))
+        if pm.shape != gt_mask.shape:
+            pm = cv2.resize(pm,
+                            (gt_mask.shape[1], gt_mask.shape[0]),
+                            interpolation=cv2.INTER_NEAREST)
+
         pm_bin = (pm > thresh).astype(np.uint8)
         tp, fp, fn, tn = pixel_counts(gt_mask, pm_bin)
         total_tp += tp; total_fp += fp; total_fn += fn; total_tn += tn
@@ -134,6 +146,9 @@ def draw_legend(image):
 
 def draw_overlay(image_path, gt_mask, pred_mask):
     img = cv2.imread(image_path)
+    h, w = img.shape[:2]
+    # resize pred_mask 
+    pred_mask = cv2.resize(pred_mask,(w, h), interpolation=cv2.INTER_NEAREST)
     overlay = img.copy()
     overlay[gt_mask == 1]   = (0,   0, 255)
     overlay[pred_mask == 1] = (0, 255,   0)
@@ -145,7 +160,7 @@ def draw_overlay(image_path, gt_mask, pred_mask):
 # -------------------------
 if __name__ == "__main__":
     # 7.1 Load data
-    gt    = load_ground_truth(GT_MASK_DIR)
+    gt = load_ground_truth(GT_MASK_DIR)
     preds = load_predictions(PRED_DIR)
 
     # 7.2 Evaluate at fixed threshold
@@ -157,7 +172,7 @@ if __name__ == "__main__":
     # 7.3 PR curve + AUC-PR
     precs, recs, threshs, aucpr = compute_pr_curve(scores, labels)
     print(f"AUC-PR: {aucpr:.3f}")
-    pr_path = os.path.join(VIS_DIR, "pr_data.json")
+    pr_path = os.path.join(EVAL_DIR, "pr_data.json")
     with open(pr_path, "w") as f:
         json.dump({
             "auc_pr": float(aucpr),
@@ -176,12 +191,12 @@ if __name__ == "__main__":
 # -------------------------
     for name, gt_mask in tqdm(gt.items(), desc="Visualising"):
         img_path = os.path.join(IMAGE_DIR, name + ".tif")
-        pm       = preds.get(name, np.zeros_like(gt_mask))
-        pm_bin   = (pm > THRESH).astype(np.uint8)
+        pm = preds.get(name, np.zeros_like(gt_mask))
+        pm_bin = (pm > THRESH).astype(np.uint8)
 
         vis = draw_overlay(img_path, gt_mask, pm_bin)
-        outp = os.path.join(VIS_DIR, name + ".jpg")
-        cv2.imwrite(outp, vis)
-        print(f"✅ Saved overlay: {outp}")
+        output = os.path.join(VIS_DIR, name + ".jpg")
+        cv2.imwrite(output, vis)
+        print(f"✅ Saved overlay: {output}")
 
     print("\n✅ All evaluation and visualisations complete.")

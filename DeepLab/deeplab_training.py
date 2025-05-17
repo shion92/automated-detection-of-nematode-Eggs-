@@ -25,7 +25,7 @@ VAL_MASK_DIR = os.path.join(VAL_DIR, "masks")
 PRED_OUTPUT_DIR = "Processed_Images/deeplab/Predictions"
 OUTPUT_FILE_EXTENSION = ".json"  # Configurable output file extension
 BATCH_SIZE = 2
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 LEARNING_RATE = 1e-4
 IMG_SIZE = 512
 DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -56,7 +56,8 @@ class EggSegmentationDataset(Dataset):
         mask = None
         if self.masks_dir:
             mask_path = os.path.join(self.masks_dir, base + ".png")
-            mask      = np.array(Image.open(mask_path).convert("L"))
+            mask = np.array(Image.open(mask_path).convert("L"), dtype=np.float32)
+            mask = (mask > 0).astype(np.float32) 
 
         if self.transform:
             if mask is not None:
@@ -119,6 +120,8 @@ class DiceLoss(nn.Module):
         targets = targets.view(-1)
         intersection = (inputs * targets).sum()
         dice = (2.*intersection + self.smooth) / (inputs.sum() + targets.sum() + self.smooth)
+        avg_pred = inputs.sum() / inputs.numel()
+        print("Average output probability:", avg_pred.item())   
         return 1 - dice
 
 # -------------------------
@@ -131,6 +134,7 @@ model = smp.DeepLabV3Plus(
     classes=1,
 )
 model.to(DEVICE)
+print("Model parameters are on:", next(model.parameters()).device)
 
 # -------------------------
 # Training Function
@@ -144,6 +148,9 @@ def train_model():
     loss_fn = DiceLoss()
     optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
     best_val_loss = float('inf')
+    
+    train_losses = []
+    val_losses = []
 
     for epoch in range(1, NUM_EPOCHS + 1):
         model.train()
@@ -161,8 +168,9 @@ def train_model():
             train_loss += loss.item()
 
         avg_train_loss = train_loss / len(train_loader)
+        train_losses.append(avg_train_loss)
         print(f"Epoch {epoch+1}: Avg Train Loss = {avg_train_loss:.4f}")
-
+        
         # Validation loop
         model.eval()
         val_loss = 0.0
@@ -174,8 +182,16 @@ def train_model():
                 val_loss += loss.item()
 
         avg_val_loss = val_loss / len(val_loader)
+        val_losses.append(avg_val_loss)
         print(f"Epoch {epoch}: Avg Val Loss = {avg_val_loss:.4f}")
 
+        metrics_dir = os.path.join("evaluation", "deeplab")
+        os.makedirs(metrics_dir, exist_ok=True)
+        with open(os.path.join(metrics_dir, "train_loss_history.json"), "w") as tf:
+            json.dump(train_losses, tf, indent=2)
+        with open(os.path.join(metrics_dir, "val_loss_history.json"), "w") as vf:
+            json.dump(val_losses, vf, indent=2)
+            
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
             model_out_dir = os.path.join("model", "deeplab")
