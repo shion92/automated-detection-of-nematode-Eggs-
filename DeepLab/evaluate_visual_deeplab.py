@@ -62,8 +62,8 @@ def load_predictions(pred_dir):
             raise KeyError(
                 f"No 'mask' key in {jf}; found keys: {list(obj.keys())}"
             )
-        pm = np.array(obj["mask"], dtype=np.uint8)
-        preds[name] = (pm > 0).astype(np.uint8)
+        pm = np.array(obj["mask"], dtype=np.float32)
+        preds[name] = pm
     return preds
 
 # -------------------------

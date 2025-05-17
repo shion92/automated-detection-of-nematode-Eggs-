@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 import json
+from glob import glob
 
 # -------------------------
 # Configuration
@@ -24,9 +25,10 @@ MASK_DIR = os.path.join(DATA_DIR, "masks")
 VAL_MASK_DIR = os.path.join(VAL_DIR, "masks")
 PRED_OUTPUT_DIR = "Processed_Images/deeplab/Predictions"
 OUTPUT_FILE_EXTENSION = ".json"  # Configurable output file extension
+MODEL_OUT_DIR = "model/deeplab"
 BATCH_SIZE = 2
 NUM_EPOCHS = 100
-LEARNING_RATE = 1e-4
+lr_list = [1e-2, 1e-3, 1e-4]
 IMG_SIZE = 512
 DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
@@ -139,24 +141,31 @@ print("Model parameters are on:", next(model.parameters()).device)
 # -------------------------
 # Training Function
 # -------------------------
-def train_model():
+def train_model(lr: float):
     train_loader = get_loader(os.path.join(DATA_DIR, "images"), MASK_DIR, get_train_transform(), batch_size=BATCH_SIZE,
         shuffle=True)
     val_loader = get_loader(os.path.join(VAL_DIR, "images"), VAL_MASK_DIR, get_val_transform(), batch_size=BATCH_SIZE,
         shuffle=False)
 
     loss_fn = DiceLoss()
-    optimizer = optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
     best_val_loss = float('inf')
     
     train_losses = []
     val_losses = []
+    
+    # Per-LR output directories
+    run_id = f"lr_{lr}"
+    metrics_dir = os.path.join("evaluation", "deeplab", run_id)
+    model_out_dir = os.path.join(MODEL_OUT_DIR, run_id)
+    os.makedirs(metrics_dir, exist_ok=True)
+    os.makedirs(model_out_dir, exist_ok=True)
 
     for epoch in range(1, NUM_EPOCHS + 1):
         model.train()
         train_loss = 0
 
-        for images, masks, _ in tqdm(train_loader, desc=f"Epoch {epoch}/{NUM_EPOCHS} [Train]"):
+        for images, masks, _ in tqdm(train_loader, desc=f"lr = {run_id} Epoch {epoch}/{NUM_EPOCHS} [Train]"):
             images, masks = images.to(DEVICE), masks.to(DEVICE)
 
             optimizer.zero_grad()
@@ -175,7 +184,7 @@ def train_model():
         model.eval()
         val_loss = 0.0
         with torch.no_grad():
-            for images, masks, _ in tqdm(val_loader, desc=f"Epoch {epoch}/{NUM_EPOCHS} [Val]"):
+            for images, masks, _ in tqdm(val_loader, desc=f"lr = {run_id} Epoch {epoch}/{NUM_EPOCHS} [Val]"):
                 images, masks = images.to(DEVICE), masks.to(DEVICE)
                 outputs = model(images)
                 loss = loss_fn(outputs, masks)
@@ -183,9 +192,9 @@ def train_model():
 
         avg_val_loss = val_loss / len(val_loader)
         val_losses.append(avg_val_loss)
-        print(f"Epoch {epoch}: Avg Val Loss = {avg_val_loss:.4f}")
-
-        metrics_dir = os.path.join("evaluation", "deeplab")
+        print(f"lr = {run_id} Epoch {epoch}: Avg Val Loss = {avg_val_loss:.4f}")
+        
+        # Save metrics
         os.makedirs(metrics_dir, exist_ok=True)
         with open(os.path.join(metrics_dir, "train_loss_history.json"), "w") as tf:
             json.dump(train_losses, tf, indent=2)
@@ -194,11 +203,9 @@ def train_model():
             
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            model_out_dir = os.path.join("model", "deeplab")
-            os.makedirs(model_out_dir, exist_ok=True)
-            model_out_dir = os.path.join(model_out_dir, "deeplabv3plus_egg_segmentation_best.pth")
+            model_out_dir = os.path.join(model_out_dir, f"deeplabv3plus_{run_id}_best.pth")
             torch.save(model.state_dict(), model_out_dir)
-            print("\t✅ New best model saved.")
+            print("\t✅ New best model saved (lr = {run_id}).")
 
 # -------------------------
 # Inference & Save Predictions
@@ -209,6 +216,20 @@ def infer_collate(batch):
     # stack images but leave names as a list
     images = torch.stack(images, dim=0)
     return images, names
+
+def load_best_model(lr):
+    model_out_dir = os.path.join(MODEL_OUT_DIR, lr)
+    model_path = f"{model_out_dir}/deeplabv3plus_{lr}_best.pth"
+    model = smp.DeepLabV3Plus(
+        encoder_name="resnet34",
+        encoder_weights="imagenet",
+        in_channels=3,
+        classes=1,
+    )
+    state = torch.load(model_path, map_location=DEVICE)
+    model.load_state_dict(state)
+    model.to(DEVICE).eval()
+    return model
 
 def predict_and_save(split="test"):
     img_dir = os.path.join("dataset", split, "images")
@@ -229,22 +250,30 @@ def predict_and_save(split="test"):
                 output = model(image)
                 pred_mask = torch.sigmoid(output).squeeze(1)
                 for mask_arr, fname in zip(pred_mask.cpu().numpy(), names):
-                    bin_mask = (mask_arr > 0.5).astype(np.uint8)
+                    raw_mask = mask_arr.astype(float) 
                     out_path = os.path.join(
                         out_dir,
                         os.path.splitext(fname)[0] + OUTPUT_FILE_EXTENSION
                     )
                     with open(out_path, 'w') as f:
-                        json.dump({"mask": bin_mask.tolist()}, f, indent=2)
+                        json.dump({"mask": raw_mask.tolist()}, f, indent=2)
 
 # -------------------------
 # Main
 # -------------------------
 if __name__ == "__main__":
     start = time.time()
-    print("\n=== Starting training... ===")
-    train_model()
+    # print("\n=== Starting training... ===")
+    # train_model()
     
+    for lr in lr_list:
+        print(f"\n=== Training with learning rate = {lr} ===")
+        train_model(lr)
+        print(f"\n✅ lr = {lr} training complete.")
+    
+    print(f"\n✅ All runs complete in {time.time() - start:.1f}s")
+    
+    model = load_best_model(lr=1e-4)
     print("\n=== Running predictions... ===")
     for split in ["test", "val", "train"]:
         print(f"\n Running inference on {split} set...")
