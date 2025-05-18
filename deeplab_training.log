@@ -1,0 +1,67 @@
+
+=== Training with learning rate = 0.0005 ===
+lr = lr_0.0005 Epoch 1/200 [Train]:   0%|          | 0/20 [00:00<?, ?it/s]Average output probability: 0.5233974456787109
+lr = lr_0.0005 Epoch 1/200 [Train]:   5%|5         | 1/20 [00:00<00:09,  1.98it/s]Average output probability: 0.5226649045944214
+lr = lr_0.0005 Epoch 1/200 [Train]:  10%|#         | 2/20 [00:00<00:06,  2.79it/s]Average output probability: 0.5232849717140198
+lr = lr_0.0005 Epoch 1/200 [Train]:  15%|#5        | 3/20 [00:01<00:05,  3.24it/s]Average output probability: 0.5225917100906372
+lr = lr_0.0005 Epoch 1/200 [Train]:  20%|##        | 4/20 [00:01<00:04,  3.52it/s]Average output probability: 0.522746205329895
+lr = lr_0.0005 Epoch 1/200 [Train]:  25%|##5       | 5/20 [00:01<00:04,  3.73it/s]Average output probability: 0.5229493975639343
+lr = lr_0.0005 Epoch 1/200 [Train]:  30%|###       | 6/20 [00:01<00:03,  3.88it/s]Average output probability: 0.5229701995849609
+lr = lr_0.0005 Epoch 1/200 [Train]:  35%|###5      | 7/20 [00:01<00:03,  3.98it/s]Average output probability: 0.5227863192558289
+lr = lr_0.0005 Epoch 1/200 [Train]:  40%|####      | 8/20 [00:02<00:03,  3.98it/s]Average output probability: 0.5228724479675293
+lr = lr_0.0005 Epoch 1/200 [Train]:  45%|####5     | 9/20 [00:02<00:02,  4.04it/s]Average output probability: 0.523020327091217
+lr = lr_0.0005 Epoch 1/200 [Train]:  50%|#####     | 10/20 [00:02<00:02,  4.10it/s]Average output probability: 0.522865891456604
+lr = lr_0.0005 Epoch 1/200 [Train]:  55%|#####5    | 11/20 [00:02<00:02,  4.05it/s]Average output probability: 0.5230211019515991
+lr = lr_0.0005 Epoch 1/200 [Train]:  60%|######    | 12/20 [00:03<00:01,  4.09it/s]Average output probability: 0.5223884582519531
+lr = lr_0.0005 Epoch 1/200 [Train]:  65%|######5   | 13/20 [00:03<00:01,  4.11it/s]Average output probability: 0.522732675075531
+lr = lr_0.0005 Epoch 1/200 [Train]:  70%|#######   | 14/20 [00:03<00:01,  4.13it/s]Average output probability: 0.5232276320457458
+lr = lr_0.0005 Epoch 1/200 [Train]:  75%|#######5  | 15/20 [00:03<00:01,  4.08it/s]Average output probability: 0.522030234336853
+lr = lr_0.0005 Epoch 1/200 [Train]:  80%|########  | 16/20 [00:04<00:00,  4.06it/s]Average output probability: 0.523345410823822
+lr = lr_0.0005 Epoch 1/200 [Train]:  85%|########5 | 17/20 [00:04<00:00,  4.10it/s]Average output probability: 0.5237759351730347
+lr = lr_0.0005 Epoch 1/200 [Train]:  90%|######### | 18/20 [00:04<00:00,  4.12it/s]Average output probability: 0.5225579142570496
+lr = lr_0.0005 Epoch 1/200 [Train]:  95%|#########5| 19/20 [00:04<00:00,  4.10it/s]Average output probability: 0.5240646600723267
+lr = lr_0.0005 Epoch 1/200 [Train]: 100%|##########| 20/20 [00:05<00:00,  4.09it/s]lr = lr_0.0005 Epoch 1/200 [Train]: 100%|##########| 20/20 [00:05<00:00,  3.89it/s]
+Epoch 2: Avg Train Loss = 0.9945
+lr = lr_0.0005 Epoch 1/200 [Val]:   0%|          | 0/5 [00:00<?, ?it/s]Average output probability: 0.5049135088920593
+lr = lr_0.0005 Epoch 1/200 [Val]:  20%|##        | 1/5 [00:00<00:00,  9.63it/s]Average output probability: 0.50634765625
+lr = lr_0.0005 Epoch 1/200 [Val]:  40%|####      | 2/5 [00:00<00:00,  9.84it/s]Average output probability: 0.508755087852478
+Average output probability: 0.5121442079544067
+lr = lr_0.0005 Epoch 1/200 [Val]:  80%|########  | 4/5 [00:00<00:00, 10.23it/s]Average output probability: 0.5092242956161499
+lr = lr_0.0005 Epoch 1/200 [Val]: 100%|##########| 5/5 [00:00<00:00,  9.50it/s]
+lr = lr_0.0005 Epoch 1: Avg Val Loss = 0.9959
+	✅ New best model saved (lr = lr_0.0005).
+lr = lr_0.0005 Epoch 2/200 [Train]:   0%|          | 0/20 [00:00<?, ?it/s]Average output probability: 0.5226207971572876
+lr = lr_0.0005 Epoch 2/200 [Train]:   5%|5         | 1/20 [00:00<00:04,  4.24it/s]Average output probability: 0.5233938694000244
+lr = lr_0.0005 Epoch 2/200 [Train]:  10%|#         | 2/20 [00:00<00:04,  4.35it/s]Average output probability: 0.5236415863037109
+lr = lr_0.0005 Epoch 2/200 [Train]:  15%|#5        | 3/20 [00:00<00:03,  4.32it/s]Average output probability: 0.5234955549240112
+lr = lr_0.0005 Epoch 2/200 [Train]:  20%|##        | 4/20 [00:00<00:03,  4.18it/s]Average output probability: 0.5232100486755371
+lr = lr_0.0005 Epoch 2/200 [Train]:  25%|##5       | 5/20 [00:01<00:03,  4.09it/s]Average output probability: 0.5230947136878967
+lr = lr_0.0005 Epoch 2/200 [Train]:  30%|###       | 6/20 [00:01<00:03,  4.15it/s]Average output probability: 0.5236692428588867
+lr = lr_0.0005 Epoch 2/200 [Train]:  35%|###5      | 7/20 [00:01<00:03,  4.15it/s]Average output probability: 0.5238094925880432
+lr = lr_0.0005 Epoch 2/200 [Train]:  40%|####      | 8/20 [00:01<00:02,  4.15it/s]Average output probability: 0.5234537124633789
+lr = lr_0.0005 Epoch 2/200 [Train]:  45%|####5     | 9/20 [00:02<00:02,  4.14it/s]Average output probability: 0.5236145257949829
+lr = lr_0.0005 Epoch 2/200 [Train]:  50%|#####     | 10/20 [00:02<00:02,  4.20it/s]Average output probability: 0.5233684778213501
+lr = lr_0.0005 Epoch 2/200 [Train]:  55%|#####5    | 11/20 [00:02<00:02,  4.27it/s]Average output probability: 0.5242213010787964
+lr = lr_0.0005 Epoch 2/200 [Train]:  60%|######    | 12/20 [00:02<00:01,  4.30it/s]Average output probability: 0.5234703421592712
+lr = lr_0.0005 Epoch 2/200 [Train]:  65%|######5   | 13/20 [00:03<00:01,  4.31it/s]Average output probability: 0.5237584114074707
+lr = lr_0.0005 Epoch 2/200 [Train]:  70%|#######   | 14/20 [00:03<00:01,  4.15it/s]Average output probability: 0.5231484174728394
+lr = lr_0.0005 Epoch 2/200 [Train]:  75%|#######5  | 15/20 [00:03<00:01,  3.88it/s]Average output probability: 0.5241790413856506
+lr = lr_0.0005 Epoch 2/200 [Train]:  80%|########  | 16/20 [00:04<00:01,  3.26it/s]Average output probability: 0.524030864238739
+lr = lr_0.0005 Epoch 2/200 [Train]:  85%|########5 | 17/20 [00:04<00:00,  3.51it/s]Average output probability: 0.5226601958274841
+lr = lr_0.0005 Epoch 2/200 [Train]:  90%|######### | 18/20 [00:04<00:00,  3.67it/s]Average output probability: 0.5252577662467957
+lr = lr_0.0005 Epoch 2/200 [Train]:  95%|#########5| 19/20 [00:04<00:00,  3.82it/s]Average output probability: 0.5239843726158142
+lr = lr_0.0005 Epoch 2/200 [Train]: 100%|##########| 20/20 [00:05<00:00,  3.91it/s]lr = lr_0.0005 Epoch 2/200 [Train]: 100%|##########| 20/20 [00:05<00:00,  3.99it/s]
+Epoch 3: Avg Train Loss = 0.9944
+lr = lr_0.0005 Epoch 2/200 [Val]:   0%|          | 0/5 [00:00<?, ?it/s]Average output probability: 0.5083573460578918
+Average output probability: 0.49831587076187134
+lr = lr_0.0005 Epoch 2/200 [Val]:  40%|####      | 2/5 [00:00<00:00, 10.83it/s]Average output probability: 0.5235732793807983
+Average output probability: 0.5291248559951782
+lr = lr_0.0005 Epoch 2/200 [Val]:  80%|########  | 4/5 [00:00<00:00, 11.03it/s]Average output probability: 0.503382682800293
+lr = lr_0.0005 Epoch 2/200 [Val]: 100%|##########| 5/5 [00:00<00:00, 12.06it/s]
+lr = lr_0.0005 Epoch 2: Avg Val Loss = 0.9960
+lr = lr_0.0005 Epoch 3/200 [Train]:   0%|          | 0/20 [00:00<?, ?it/s]Average output probability: 0.5246762037277222
+lr = lr_0.0005 Epoch 3/200 [Train]:   5%|5         | 1/20 [00:00<00:04,  4.27it/s]Average output probability: 0.5236338376998901
+lr = lr_0.0005 Epoch 3/200 [Train]:  10%|#         | 2/20 [00:00<00:04,  4.37it/s]Average output probability: 0.5244467854499817
+lr = lr_0.0005 Epoch 3/200 [Train]:  15%|#5        | 3/20 [00:00<00:03,  4.34it/s]Average output probability: 0.5242288708686829
+lr = lr_0.0005 Epoch 3/200 [Train]:  20%|##        | 4/20 [00:00<00:03,  4.31it/s]Average output probability: 0.5235428810119629
+lr = lr_0.0005 Epoch 3/200 [Train]:  25%|##5       | 5/20 [00:01<00:03,  4.37it/s]Average output probability: 0.524135947227478
