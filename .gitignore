@@ -71,3 +71,8 @@ verify_open_metric.py
 faster_rcnn/cv_loss.xlsx
 faster_rcnn/~$cv_loss.xlsx
 /Archive
+*.log
+deeplab_training.log
+deeplab_training.log
+deeplab_training.log
+deeplab_training.log
