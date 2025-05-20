@@ -14,7 +14,7 @@ ultralytics==8.3.94
 
 # Labeling tools
 labelme==5.7.0
-# labelImg==1.8.6  # (commented out due to PyQt5 issues)
+labelImg==1.8.6 # (commented out due to PyQt5 issues)
 
 # DeepLab (Segmentation models)
 segmentation-models-pytorch==0.3.3
