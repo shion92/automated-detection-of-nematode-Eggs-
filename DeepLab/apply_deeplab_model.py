@@ -143,7 +143,7 @@ if __name__ == "__main__":
     # train_model()
 
     
-    model = load_best_model(lr= 0.0003)
+    model = load_best_model(lr= 0.0008)
     print("\n=== Running predictions... ===")
     for split in ["test", "val", "train"]:
         print(f"\n Running inference on {split} set...")

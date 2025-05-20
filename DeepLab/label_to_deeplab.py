@@ -27,7 +27,6 @@ def convert_labelme_to_mask(json_path, img_shape, target_label):
 
         points = shape.get("points", [])
         if shape.get("shape_type") == "polygon":
-            # Fix: convert points from list-of-lists to list-of-tuples
             points = [tuple(p) for p in points]
             from PIL import ImageDraw
             mask_img = Image.new("L", (img_shape[1], img_shape[0]), 0)
@@ -44,8 +43,9 @@ def convert_labelme_to_mask(json_path, img_shape, target_label):
 for split in SPLIT:
     img_dir = os.path.join(IMAGE_ROOT, split, "images")
     mask_out_dir = os.path.join(OUT_MASK_DIR, split, "masks")
+    json_dir = os.path.join(IMAGE_ROOT, split, "json")
     if not os.path.exists(img_dir):
-        print(f"⚠️ Skipping {split} (directory not found)")
+        print(f"Warning: Skipping {split} (directory not found)")
         continue
     print(f"Processing {split}...")
     os.makedirs(mask_out_dir, exist_ok=True)
@@ -56,7 +56,7 @@ for split in SPLIT:
             continue
 
         img_path  = os.path.join(img_dir, fname)
-        json_path = os.path.join(img_dir, base + ".json")
+        json_path = os.path.join(json_dir, base + ".json")
 
         img = Image.open(img_path).convert("RGB")
         img_np = np.array(img)

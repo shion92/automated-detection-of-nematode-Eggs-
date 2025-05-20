@@ -15,18 +15,7 @@ from PIL import Image
 from tqdm import tqdm
 import json
 from glob import glob
-import sys
-
-class Tee(object):
-    def __init__(self, *files):
-        self.files = files
-    def write(self, obj):
-        for f in self.files:
-            f.write(obj)
-            f.flush()
-    def flush(self):
-        for f in self.files:
-            f.flush()
+import logging
 
 # -------------------------
 # Configuration
@@ -39,7 +28,7 @@ PRED_OUTPUT_DIR = "Processed_Images/deeplab/Predictions"
 OUTPUT_FILE_EXTENSION = ".json"  # Configurable output file extension
 MODEL_OUT_DIR = os.path.join("model", "deeplab")
 BATCH_SIZE = 2
-NUM_EPOCHS = 200
+NUM_EPOCHS = 4
 lr_list = [0.0005, 0.0008, 0.0001]
 IMG_SIZE = 512
 DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
@@ -118,7 +107,9 @@ def get_loader(img_dir, mask_dir=None, transform=None, batch_size=BATCH_SIZE, sh
                       batch_size=batch_size, 
                       shuffle=shuffle,
                       num_workers=0,
-                      pin_memory=True)
+                      pin_memory=True,
+                      drop_last=True # drop the last batch to avoid uneven batch sizes
+                      )
 
 # -------------------------
 # Loss Function
@@ -281,27 +272,35 @@ def predict_and_save(split="test"):
 # Main
 # -------------------------
 if __name__ == "__main__":
-    with open("deeplab_training.log", "w") as log_file:
-        sys.stdout = Tee(sys.stdout, log_file)
-        sys.stderr = Tee(sys.stderr, log_file)
+    os.makedirs("Log", exist_ok=True)
+    logging.basicConfig(
+        filename="Log/deeplab_training.log",
+        filemode="w",
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s"
+    )
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    console.setFormatter(formatter)
+    logging.getLogger().addHandler(console)
+
+    start = time.time()
+    logging.info("=== Starting training... ===")
+    
+    for lr in lr_list:
+        logging.info(f"\n=== Training with learning rate = {lr} ===")
+        train_model(lr)
+        logging.info(f"\n✅ lr = {lr} training complete.")
+    
+    logging.info(f"\n✅ All runs complete in {time.time() - start:.1f}s")
+    
+    # model = load_best_model(lr= 0.001)
+    # logging.info("\n=== Running predictions... ===")
+    # for split in ["test", "val", "train"]:
+    #     logging.info(f"\n Running inference on {split} set...")
+    #     predict_and_save(split=split)
         
-        start = time.time()
-        # print("\n=== Starting training... ===")
-        # train_model()
-        
-        for lr in lr_list:
-            print(f"\n=== Training with learning rate = {lr} ===")
-            train_model(lr)
-            print(f"\n✅ lr = {lr} training complete.")
-        
-        print(f"\n✅ All runs complete in {time.time() - start:.1f}s")
-        
-        model = load_best_model(lr= 0.001)
-        print("\n=== Running predictions... ===")
-        for split in ["test", "val", "train"]:
-            print(f"\n Running inference on {split} set...")
-            predict_and_save(split=split)
-            
-        print(f"\n✅ Done! Total runtime: {time.time() - start:.2f} seconds.")
+    logging.info(f"\n✅ Done! Total runtime: {time.time() - start:.2f} seconds.")
 
 
