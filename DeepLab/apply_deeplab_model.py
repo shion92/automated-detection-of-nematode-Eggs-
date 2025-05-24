@@ -28,7 +28,7 @@ OUTPUT_FILE_EXTENSION = ".json"  # Configurable output file extension
 MODEL_OUT_DIR = os.path.join("model", "deeplab")
 BATCH_SIZE = 2
 NUM_EPOCHS = 200
-lr_list = [0.0005, 0.0008, 0.0001]
+# lr_list = [0.0005, 0.0008, 0.0001]
 IMG_SIZE = 512
 DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 

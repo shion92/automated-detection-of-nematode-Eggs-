@@ -29,7 +29,7 @@ VIS_DIR = f"Processed_Images/deeplab/Predictions/{SPLIT}"
 EVAL_DIR = f"evaluation/deeplab/{SPLIT}"
 os.makedirs(EVAL_DIR, exist_ok=True)
 GT_MASK_DIR  = f"dataset/{SPLIT}/masks"
-THRESH = 0.5   # binarisation threshold for predicted masks
+THRESH = 0.7   # binarisation threshold for predicted masks
 
 # -------------------------
 # IoU Helper 

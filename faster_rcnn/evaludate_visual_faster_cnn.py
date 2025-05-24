@@ -295,7 +295,7 @@ if __name__ == "__main__":
         json_path = os.path.join(PRED_DIR, img_name.replace(".tif", ".json"))
 
         if not os.path.exists(json_path):
-            print(f"⚠️ Skipping {img_name}: no prediction found.")
+            print(f"Warning: Skipping {img_name}: no prediction found.")
             continue
 
         with open(json_path, 'r') as f:

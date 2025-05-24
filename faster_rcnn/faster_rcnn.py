@@ -20,6 +20,7 @@ from albumentations.core.composition import Compose
 from torchvision.transforms import functional as F
 import xml.etree.ElementTree as ET
 from tqdm import tqdm # progress bars
+import logging
 
 # -------------------------
 # Configuration
@@ -32,9 +33,16 @@ CLASS_NAMES = ["__background__", "nematode egg"]
 TRAIN_DIR = "dataset/train"
 VAL_DIR = "dataset/val"
 TEST_DIR = "dataset/test"
-PRED_OUTPUT_DIR = "Processed_Images/faster_rcnn_ResNet-34/Predictions"
-num_epochs = 20
-backbone_name = "resnet50"  # Backbone model
+backbone_name = "resnet50"  # or "resnet34"
+PRED_OUTPUT_DIR = f"Processed_Images/faster_rcnn_{backbone_name}/Predictions"
+num_epochs = 2
+lr_list = [
+    0.01, 
+    0.005,
+    0.001,
+    0.0005, 
+    0.0001, 
+    ]
 IMG_SIZE = 512  # Resize images to (512,512)
 SAVE_DIR = f"model/{backbone_name}"
 os.makedirs(SAVE_DIR, exist_ok=True)
@@ -180,11 +188,19 @@ def get_loader(root, batch_size=2, transforms=F.to_tensor):
 # -------------------------
 # Training Loop
 # -------------------------
-def train_model(num_epochs):
+def train_model(num_epochs, lr=0.001):
     set_seed()
 
-    train_loader = get_loader(TRAIN_DIR, transforms=get_train_transforms()) # apply Albumentations on train only
-    val_loader = get_loader(VAL_DIR) # uses default F.to_tensor
+    train_loader = get_loader(TRAIN_DIR, transforms=get_train_transforms())
+    val_loader = get_loader(VAL_DIR)
+    
+    train_losses = []
+    val_losses = []
+    
+    # Per-LR output directories
+    run_id = f"lr_{lr}"
+    metrics_dir = os.path.join("evaluation", "faster_rcnn", run_id)
+    os.makedirs(metrics_dir, exist_ok=True)
 
     if backbone_name == "resnet50":
         # Use pre-trained FasterRCNN with ResNet50 backbone
@@ -193,23 +209,22 @@ def train_model(num_epochs):
         
     elif backbone_name == "resnet34":
         # Use pre-trained FasterRCNN with ResNet34 backbone
-        # build a ResNet-34 + FPN backbone (pretrained on ImageNet)
         backbone_net = resnet_fpn_backbone('resnet34', pretrained=True)
-        # plug it into the Faster R-CNN head
-        model = FasterRCNN(backbone_net) 
+        model = FasterRCNN(backbone_net)
     else:
         raise ValueError(f"Unsupported backbone: {backbone_name}. Use 'resnet50' or 'resnet34'.")
-    
+
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = torchvision.models.detection.faster_rcnn.FastRCNNPredictor(in_features, NUM_CLASSES)
     model.to(DEVICE)
 
-    print(f"=== Using device: {DEVICE} ")
+    print(f"=== Using device: {DEVICE}")
+    print(f"=== Training with LR={lr} and backbone={backbone_name}")
 
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=0.001, momentum=0.9, weight_decay=0.0005)
-
+    optimizer = torch.optim.SGD(params, lr=lr, momentum=0.9, weight_decay=0.0005)
     torch.autograd.set_detect_anomaly(True)
+
     best_val_loss = float('inf')
     
     print(f"===Training on {len(train_loader.dataset)} training samples and {len(val_loader.dataset)} validation samples. ===")
@@ -218,27 +233,24 @@ def train_model(num_epochs):
     for epoch in range(num_epochs):
         model.train()
         running_loss = 0.0
+        print(f"\n--- Epoch {epoch + 1}/{num_epochs} [Train] ---")
 
-        for batch_idx, (images, targets, _) in enumerate(train_loader):
-            if not images:   # <- empty list
+        for batch_idx, (images, targets, _) in enumerate(tqdm(train_loader, desc=f"Epoch {epoch+1} [Train]")):
+            if not images:
+                print(f"Skipping empty image batch at training batch_idx {batch_idx}")
                 continue
             images = [img.to(DEVICE) for img in images]
             targets = [{k: v.to(DEVICE) for k, v in t.items()} for t in targets]
 
-            for t in targets:
-                print(f"Boxes: {t['boxes'].shape}, Labels: {t['labels']}, Areas: {t['area']}")
-            
+            # The model returns a dictionary of losses
             loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
 
             if not torch.isfinite(losses):
-                print(f"⚠️ Non-finite loss at batch {batch_idx}: {losses.item()}")
-                continue
+                print(f"Warning: Non-finite loss at batch {batch_idx}: {losses.item()}")
+                continue # Skip updating weights for this batch
 
             optimizer.zero_grad()
-            if not torch.isfinite(losses):
-                print(f"⚠️ Non-finite loss detected: {losses.item()} — skipping batch")
-                continue
             losses.backward()
             optimizer.step()
 
@@ -247,33 +259,39 @@ def train_model(num_epochs):
                 print(f"   Batch {batch_idx}, Training Loss: {losses.item():.4f}")
 
         avg_train_loss = running_loss / len(train_loader)
+        train_losses.append(avg_train_loss)
         print(f"Epoch {epoch+1}, Avg Training Loss: {avg_train_loss:.4f}")
 
-        # --- Validation loop ---
-        # Force model to compute loss, even though we call it "validation"
-        model.train()   
-        
+        # --- Validation ---
+        model.train()  # keep model in training mode to allow loss computation
         val_loss = 0.0
         with torch.no_grad():
-            for batch_idx, (images, targets, _) in enumerate(val_loader):
-            # ── skip empty validation batches ───────────────────────
-                if len(images) == 0:
+            for batch_idx, (images, targets, _) in enumerate(tqdm(val_loader, desc=f"Epoch {epoch+1} [Val]")):
+                if not images:
+                    print(f"Skipping empty image batch at validation batch_idx {batch_idx}")
                     continue
-
                 images = [img.to(DEVICE) for img in images]
                 targets = [{k: v.to(DEVICE) for k, v in t.items()} for t in targets]
                 loss_dict = model(images, targets)
                 val_loss += sum(loss for loss in loss_dict.values()).item()
 
         avg_val_loss = val_loss / len(val_loader)
-        print(f"   Validation Loss: {avg_val_loss:.4f}")
+        val_losses.append(avg_val_loss)
+        print(f"Epoch {epoch + 1}: Avg Validation Loss = {avg_val_loss:.4f}")
 
+        # --- Save best model ---
         if avg_val_loss < best_val_loss:
             best_val_loss = avg_val_loss
-            fname = f"faster_rcnn_nematode_{backbone_name}_best.pth"
-            out_path = os.path.join(SAVE_DIR, fname)
-            torch.save(model.state_dict(), f"faster_rcnn_nematode_{backbone_name}_best.pth")
-            print(f"   ✅ New best model saved! (val loss: {best_val_loss:.4f})")
+            fname = f"faster_rcnn_{backbone_name}_{run_id}_best.pth"
+            torch.save(model.state_dict(), os.path.join(SAVE_DIR, fname))
+            print(f"\t✅ New best model saved (val loss: {best_val_loss:.4f}, lr = {run_id}).")
+
+        # --- Save loss histories ---
+        with open(os.path.join(metrics_dir, "train_loss_history.json"), "w") as tf:
+            json.dump(train_losses, tf, indent=2)
+        with open(os.path.join(metrics_dir, "val_loss_history.json"), "w") as vf:
+            json.dump(val_losses, vf, indent=2)
+        print(f"Loss histories saved to {metrics_dir}")
 
     return model
 
@@ -281,8 +299,9 @@ def train_model(num_epochs):
 # -------------------------
 # Inference & Save Predictions
 # -------------------------
-def predict_and_save(model, split="test"):
-    os.makedirs(os.path.join(PRED_OUTPUT_DIR, split), exist_ok=True)
+def predict_and_save(model, split="test", lr="0.001"):
+    run_id = f"lr_{lr}"
+    os.makedirs(os.path.join(PRED_OUTPUT_DIR, run_id, split), exist_ok=True)
     loader = get_loader(os.path.join("dataset", split), batch_size=1)
     model.eval()
 
@@ -311,7 +330,7 @@ def predict_and_save(model, split="test"):
                 "scores": [round(float(s), 4) for s in filtered_scores]
             }
 
-            out_path = os.path.join(PRED_OUTPUT_DIR, split, names[0].replace(".tif", ".json"))
+            out_path = os.path.join(PRED_OUTPUT_DIR, run_id, split, names[0].replace(".tif", ".json"))
             with open(out_path, 'w') as f:
                 json.dump(pred_json, f, indent=2)
                 
@@ -322,16 +341,31 @@ def predict_and_save(model, split="test"):
 # Main
 # -------------------------
 if __name__ == "__main__":
-    start_time = time.time()
+    os.makedirs("Log", exist_ok=True)
+    logging.basicConfig(
+        filename="Log/faster_rcnn_training.log",
+        filemode="w",
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s"
+    )
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+    console.setFormatter(formatter)
+    logging.getLogger().addHandler(console)
 
-    print("=== Starting training... ===")
-    model = train_model(num_epochs=num_epochs)
+    start = time.time()
+    logging.info("=== Starting Faster R-CNN training ===")
 
-    print("=== Running predictions... ===")
-    for split in ["test", "val", "train"]:
-        print(f"\n Running inference on {split} set...")
-        predict_and_save(model, split=split)
+    for lr in lr_list:  # Define this list before the loop, e.g. lr_list = [0.001, 0.0005, 0.0001]
+        logging.info(f"\n=== Training with learning rate = {lr} ===")
+        model = train_model(num_epochs=num_epochs, lr=lr)  # Ensure train_model accepts learning_rate
+        logging.info(f"✅ Training complete for lr = {lr}")
 
-    total_time = time.time() - start_time
-    print(f"\n✅ Done! Total runtime: {total_time:.2f} seconds.")
+        logging.info(f"=== Running inference for lr = {lr} ===")
+        for split in ["test", "val", "train"]:
+            logging.info(f"Running inference on {split} set...")
+            predict_and_save(model, split=split)
+
+    logging.info(f"\n✅ All training runs completed in {time.time() - start:.2f} seconds.")
 

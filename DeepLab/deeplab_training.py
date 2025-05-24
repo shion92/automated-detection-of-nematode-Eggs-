@@ -16,6 +16,7 @@ from tqdm import tqdm
 import json
 from glob import glob
 import logging
+import cv2
 
 # -------------------------
 # Configuration
@@ -28,8 +29,14 @@ PRED_OUTPUT_DIR = "Processed_Images/deeplab/Predictions"
 OUTPUT_FILE_EXTENSION = ".json"  # Configurable output file extension
 MODEL_OUT_DIR = os.path.join("model", "deeplab")
 BATCH_SIZE = 2
-NUM_EPOCHS = 4
-lr_list = [0.0005, 0.0008, 0.0001]
+NUM_EPOCHS = 300
+lr_list = [
+    # 0.01, 
+    0.001, 
+    # 0.0001, 
+    # 0.0005, 
+    # 0.0008
+    ]
 IMG_SIZE = 512
 DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
@@ -82,13 +89,27 @@ class EggSegmentationDataset(Dataset):
 # -------------------------
 def get_train_transform():
     return A.Compose([
-        A.Resize(IMG_SIZE, IMG_SIZE),
+        A.RandomScale(scale_limit=(0.5, 2.0), interpolation=cv2.INTER_LINEAR, p=0.5),
+        A.RandomCrop(IMG_SIZE, IMG_SIZE, always_apply=True),
         A.HorizontalFlip(p=0.5),
         A.RandomRotate90(p=0.5),
         A.RandomBrightnessContrast(p=0.2),
         A.GaussNoise(p=0.2),
+        A.CoarseDropout(
+            max_holes=8,
+            max_height=64,
+            max_width=64,
+            fill_value=0,
+            p=0.3),
         A.Normalize(),
         ToTensorV2(),
+        # A.Resize(IMG_SIZE, IMG_SIZE),
+        # A.HorizontalFlip(p=0.5),
+        # A.RandomRotate90(p=0.5),
+        # A.RandomBrightnessContrast(p=0.2),
+        # A.GaussNoise(p=0.2),
+        # A.Normalize(),
+        # ToTensorV2(),
     ])
 
 def get_val_transform():
@@ -133,7 +154,7 @@ class DiceLoss(nn.Module):
 # Model
 # -------------------------
 model = smp.DeepLabV3Plus(
-    encoder_name="resnet34",
+    encoder_name="resnet50",
     encoder_weights="imagenet",
     in_channels=3,
     classes=1,
@@ -150,6 +171,8 @@ def train_model(lr: float):
         shuffle=False)
 
     loss_fn = DiceLoss()
+    bce_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([5.0]).to(DEVICE))
+    
     optimizer = torch.optim.SGD(
                     model.parameters(),
                     lr=lr,           # e.g. 1e-2 or 1e-3
@@ -177,7 +200,7 @@ def train_model(lr: float):
 
             optimizer.zero_grad()
             outputs = model(images)
-            loss = loss_fn(outputs, masks)
+            loss = bce_fn(outputs, masks) + loss_fn(outputs, masks)
             loss.backward()
             optimizer.step()
 
@@ -194,7 +217,7 @@ def train_model(lr: float):
             for images, masks, _ in tqdm(val_loader, desc=f"lr = {run_id} Epoch {epoch}/{NUM_EPOCHS} [Val]"):
                 images, masks = images.to(DEVICE), masks.to(DEVICE)
                 outputs = model(images)
-                loss = loss_fn(outputs, masks)
+                loss = bce_fn(outputs, masks) + loss_fn(outputs, masks)
                 val_loss += loss.item()
 
         avg_val_loss = val_loss / len(val_loader)
@@ -229,7 +252,7 @@ def load_best_model(lr):
     model_out_dir = os.path.join(MODEL_OUT_DIR, f"lr_{lr}")
     model_path = f"{model_out_dir}/deeplabv3plus_lr_{lr}_best.pth"
     model = smp.DeepLabV3Plus(
-        encoder_name="resnet34",
+        encoder_name="resnet50",
         encoder_weights="imagenet",
         in_channels=3,
         classes=1,
