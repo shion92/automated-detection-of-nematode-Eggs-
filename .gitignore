@@ -2,7 +2,6 @@ Data/
 Jupyter Notebooks/
 pdf/
 Reports/
-Reports/
 Results/
 *.pyc
 __pycache__/
@@ -27,6 +26,7 @@ venv 2/
 *.json
 *.xml
 *.pt
+/model
 
 
 
@@ -61,9 +61,7 @@ man_label.py
 *.pth
 yolov5/
 /YOLO/nematode_yolov5s
-/YOLO/nematode_yolov5s
 /YOLO/nematode_yolov5s_train
-/YOLO/nematode_yolov5s
 requirements.txt
 .zshrc
 /verification_vis
@@ -73,11 +71,9 @@ faster_rcnn/~$cv_loss.xlsx
 /Archive
 *.log
 deeplab_training.log
-deeplab_training.log
-deeplab_training.log
-deeplab_training.log
 /Raw_Data
 faster_rcnn/faster_rcnn_with_cv.py
 faster_rcnn/faster_rcnn_with_cv.py
 /YOLO/iteration_1.1
 /YOLO/iteration_1
+

@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 # -------------------------
 # 1) Configuration
 # -------------------------
-SPLIT = "train"  # Change to "val" if needed
+SPLIT = "test"  # Change to "val" if needed
 xml_dir = os.path.join("dataset", SPLIT, "annotations")
 yolo_dir = os.path.join("dataset", SPLIT, "labels")
 os.makedirs(yolo_dir, exist_ok=True)
@@ -115,4 +115,4 @@ xml_files = [os.path.join(xml_dir, f) for f in os.listdir(xml_dir) if f.endswith
 for xml_file in xml_files:
     convert_voc_to_yolo(xml_file)
 
-print(f"YOLO annotations saved in: {yolo_dir}")
+print(f"\n✅ YOLO annotations saved in: {yolo_dir}")
