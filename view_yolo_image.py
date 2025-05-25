@@ -32,7 +32,7 @@ def visualize_yolo_annotations(image_path):
     annotation_file = os.path.join(yolo_dir, os.path.basename(image_path).replace(".tif", ".txt"))
 
     if not os.path.exists(annotation_file):
-        print(f"⚠️ No annotation found for {image_path}")
+        print(f"Warning No annotation found for {image_path}")
         return
 
     # Read YOLO annotations

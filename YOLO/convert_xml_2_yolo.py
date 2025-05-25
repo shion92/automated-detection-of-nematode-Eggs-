@@ -1,20 +1,41 @@
+# -------------------------
+# Pascal VOC XML to YOLO Converter
+# -------------------------
+# This script converts Pascal VOC XML bounding box annotations
+# to YOLO format .txt files for object detection training.
+# Only the "nematode egg" class is used (class 0).
+# -------------------------
+# 1) Configuration
+# 2) Class mapping
+# 3) XML directory check
+# 4) Conversion function
+# 5) Batch conversion
+# -------------------------
+
 import os
 import xml.etree.ElementTree as ET
 
-current_dir = os.getcwd()
-xml_dir = os.path.join(current_dir, "dataset", "test", "annotations")  
-yolo_dir = os.path.join(current_dir, "dataset", "test", "yolo_annotations")
+# -------------------------
+# 1) Configuration
+# -------------------------
+SPLIT = "train"  # Change to "val" if needed
+xml_dir = os.path.join("dataset", SPLIT, "annotations")
+yolo_dir = os.path.join("dataset", SPLIT, "labels")
 os.makedirs(yolo_dir, exist_ok=True)
 
-# Define class mappings 
+# -------------------------
+# 2) Class mapping
+# -------------------------
 CLASS_MAPPING = {
     "nematode egg": 0,
-    # "water bubble": 1,  # No longer using these classes
-    # "debris": 2,        # No longer using these classes
-    # "green grids": 3    # No longer using these classes
+    # "water bubble": 1,
+    # "debris": 2,
+    # "green grids": 3
 }
 
-# Print absolute paths
+# -------------------------
+# 3) XML directory check
+# -------------------------
 print(f"Searching for XML annotations in: {xml_dir}")
 print(f"YOLO annotations will be saved in: {yolo_dir}")
 
@@ -30,26 +51,27 @@ else:
     else:
         print(f"Found {len(xml_files)} XML files in {xml_dir}")
 
-# Convert Pascal VOC .xml to YOLO .txt
+# -------------------------
+# 4) Conversion function
+# -------------------------
 def convert_voc_to_yolo(xml_file):
     try:
         tree = ET.parse(xml_file)
         root = tree.getroot()
-        
-        # Debugging: Print root tag to check format
-        print(f"Processing: {xml_file} | Root Tag: {root.tag}")
 
         # Get image size
         size = root.find("size")
         if size is None:
             print(f"ERROR: Missing <size> tag in {xml_file}")
             return
-        
+
         img_width = int(size.find("width").text)
         img_height = int(size.find("height").text)
 
         # YOLO annotation file
-        annotation_file = os.path.join(yolo_dir, os.path.basename(xml_file).replace(".xml", ".txt"))
+        annotation_file = os.path.join(
+            yolo_dir, os.path.basename(xml_file).replace(".xml", ".txt")
+        )
 
         with open(annotation_file, "w") as f:
             for obj in root.findall("object"):
@@ -57,17 +79,16 @@ def convert_voc_to_yolo(xml_file):
 
                 # Check if the object class is in our predefined mapping
                 if class_name not in CLASS_MAPPING:
-                    print(f" WARNING: Unknown class '{class_name}' in {xml_file}. Skipping!")  # NEW: Skip non-nematode objects
+                    print(f" WARNING: Unknown class '{class_name}' in {xml_file}. Skipping!")
                     continue
-                
-                class_id = CLASS_MAPPING[class_name]  # Assign the correct class ID
+                class_id = CLASS_MAPPING[class_name]
 
                 # Bounding box
                 bbox = obj.find("bndbox")
                 if bbox is None:
                     print(f"ERROR: Missing <bndbox> in {xml_file}")
                     continue
-                
+
                 xmin = int(bbox.find("xmin").text)
                 ymin = int(bbox.find("ymin").text)
                 xmax = int(bbox.find("xmax").text)
@@ -86,7 +107,9 @@ def convert_voc_to_yolo(xml_file):
     except Exception as e:
         print(f"ERROR processing {xml_file}: {str(e)}")
 
-# Process all XML files
+# -------------------------
+# 5) Batch conversion
+# -------------------------
 xml_files = [os.path.join(xml_dir, f) for f in os.listdir(xml_dir) if f.endswith(".xml")]
 
 for xml_file in xml_files:

@@ -23,12 +23,13 @@ from tqdm import tqdm
 # -------------------------
 # Configuration
 # -------------------------
-SPLIT = "test"
+SPLIT = "test" # change as needed
 IMAGE_DIR = f"dataset/{SPLIT}/images"
-# PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn/Predictions/{SPLIT}"
-PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn_resnet50/Predictions/{SPLIT}"
+backbone_name = "resnet50" 
+lr = 0.005  # change as needed
+PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn_{backbone_name}/Predictions/lr_{lr}/{SPLIT}"
 ANN_DIR = f"dataset/{SPLIT}/annotations"
-IOU_THRESH = 0.5
+IOU_THRESH = 0.5 # change as needed
 
 # -------------------------
 # IoU Helper 
@@ -294,7 +295,7 @@ if __name__ == "__main__":
         json_path = os.path.join(PRED_DIR, img_name.replace(".tif", ".json"))
 
         if not os.path.exists(json_path):
-            print(f"⚠️ Skipping {img_name}: no prediction found.")
+            print(f"Warning Skipping {img_name}: no prediction found.")
             continue
 
         with open(json_path, 'r') as f:

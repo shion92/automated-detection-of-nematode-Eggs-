@@ -35,7 +35,7 @@ VAL_DIR = "dataset/val"
 TEST_DIR = "dataset/test"
 backbone_name = "resnet50"  # or "resnet34"
 PRED_OUTPUT_DIR = f"Processed_Images/faster_rcnn_{backbone_name}/Predictions"
-num_epochs = 2
+num_epochs = 100
 lr_list = [
     0.01, 
     0.005,
@@ -44,7 +44,7 @@ lr_list = [
     0.0001, 
     ]
 IMG_SIZE = 512  # Resize images to (512,512)
-SAVE_DIR = f"model/{backbone_name}"
+SAVE_DIR = f"model/faster_rcnn/{backbone_name}"
 os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(PRED_OUTPUT_DIR, exist_ok=True)
 
@@ -112,14 +112,14 @@ class VOCDataset(Dataset):
             
             # # Reject invalid boxes
             # if box[2] <= box[0] or box[3] <= box[1]:
-            #     print(f"⚠️ Invalid box in {image_id}: {box}")
+            #     print(f"Warning Invalid box in {image_id}: {box}")
             #     continue
             
             boxes.append(box)
             labels.append(1) # “nematode egg” → class 1
 
         if len(boxes) == 0:
-            print(f"⚠️ Skipping image with no valid boxes: {image_id}")
+            print(f"Warning Skipping image with no valid boxes: {image_id}")
             return None  # Skip invalid sample
         
         # Convert boxes and labels to tensors
@@ -188,7 +188,7 @@ def get_loader(root, batch_size=2, transforms=F.to_tensor):
 # -------------------------
 # Training Loop
 # -------------------------
-def train_model(num_epochs, lr=0.001):
+def train_model(num_epochs, lr=0.001, patience=10, min_delta=1e-4):
     set_seed()
 
     train_loader = get_loader(TRAIN_DIR, transforms=get_train_transforms())
@@ -226,7 +226,8 @@ def train_model(num_epochs, lr=0.001):
     torch.autograd.set_detect_anomaly(True)
 
     best_val_loss = float('inf')
-    
+    epochs_no_improve = 0  # Early stopping counter
+
     print(f"===Training on {len(train_loader.dataset)} training samples and {len(val_loader.dataset)} validation samples. ===")
     print(f"Optimizer: {optimizer.__class__.__name__} ===")
 
@@ -279,12 +280,16 @@ def train_model(num_epochs, lr=0.001):
         val_losses.append(avg_val_loss)
         print(f"Epoch {epoch + 1}: Avg Validation Loss = {avg_val_loss:.4f}")
 
-        # --- Save best model ---
-        if avg_val_loss < best_val_loss:
+        # --- Early Stopping Check ---
+        if avg_val_loss < best_val_loss - min_delta:
             best_val_loss = avg_val_loss
+            epochs_no_improve = 0
             fname = f"faster_rcnn_{backbone_name}_{run_id}_best.pth"
             torch.save(model.state_dict(), os.path.join(SAVE_DIR, fname))
             print(f"\t✅ New best model saved (val loss: {best_val_loss:.4f}, lr = {run_id}).")
+        else:
+            epochs_no_improve += 1
+            print(f"\tNo improvement for {epochs_no_improve} epoch(s).")
 
         # --- Save loss histories ---
         with open(os.path.join(metrics_dir, "train_loss_history.json"), "w") as tf:
@@ -293,15 +298,19 @@ def train_model(num_epochs, lr=0.001):
             json.dump(val_losses, vf, indent=2)
         print(f"Loss histories saved to {metrics_dir}")
 
+        # --- Stop if patience exceeded ---
+        if epochs_no_improve >= patience:
+            print(f"\nEarly stopping triggered after {epoch+1} epochs. Best val loss: {best_val_loss:.4f}")
+            break
+
     return model
 
 
 # -------------------------
 # Inference & Save Predictions
 # -------------------------
-def predict_and_save(model, split="test", lr="0.001"):
+def predict_and_save(model, split="test", lr=0.001):
     run_id = f"lr_{lr}"
-    os.makedirs(os.path.join(PRED_OUTPUT_DIR, run_id, split), exist_ok=True)
     loader = get_loader(os.path.join("dataset", split), batch_size=1)
     model.eval()
 
@@ -309,7 +318,7 @@ def predict_and_save(model, split="test", lr="0.001"):
         for imgs, _, names in tqdm(loader, desc=f"Inference on {split} set"):
             skipped = 0
             if not imgs:  # Empty batch
-                print("⚠️ Skipping batch with no valid images.")
+                print("Warning: Skipping batch with no valid images.")
                 skipped += 1
                 continue
             
@@ -343,7 +352,7 @@ def predict_and_save(model, split="test", lr="0.001"):
 if __name__ == "__main__":
     os.makedirs("Log", exist_ok=True)
     logging.basicConfig(
-        filename="Log/faster_rcnn_training.log",
+        filename="Log/faster_rcnn_training_v2.log",
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s"
@@ -358,14 +367,16 @@ if __name__ == "__main__":
     logging.info("=== Starting Faster R-CNN training ===")
 
     for lr in lr_list:  # Define this list before the loop, e.g. lr_list = [0.001, 0.0005, 0.0001]
-        logging.info(f"\n=== Training with learning rate = {lr} ===")
-        model = train_model(num_epochs=num_epochs, lr=lr)  # Ensure train_model accepts learning_rate
-        logging.info(f"✅ Training complete for lr = {lr}")
+        # logging.info(f"\n=== Training with learning rate = {lr} ===")
+        # model = train_model(num_epochs=num_epochs, lr=lr)  # Ensure train_model accepts learning_rate
+        # logging.info(f"✅ Training complete for lr = {lr}")
+        
+        model 
 
         logging.info(f"=== Running inference for lr = {lr} ===")
         for split in ["test", "val", "train"]:
             logging.info(f"Running inference on {split} set...")
-            predict_and_save(model, split=split)
+            predict_and_save(model, split=split, lr= lr)
 
     logging.info(f"\n✅ All training runs completed in {time.time() - start:.2f} seconds.")
 

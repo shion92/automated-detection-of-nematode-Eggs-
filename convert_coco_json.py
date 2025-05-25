@@ -84,7 +84,7 @@ for split in DATA_SPLITS:
         fname = stem + ".tif"
         image_id = name2id.get(fname)
         if image_id is None:
-            print(f"⚠️  Skipping {jp}: no matching image_id for {fname}")
+            print(f"Warning  Skipping {jp}: no matching image_id for {fname}")
             continue
 
         data = json.load(open(jp))
