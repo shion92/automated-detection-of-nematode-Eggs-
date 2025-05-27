@@ -12,7 +12,7 @@ OUTPUT_JSON_DIR = "Processed_Image/yolo"
 CONFIDENCE_THRESHOLD = 0.5
 
 # === Create output folders ===
-os.makedirs(OUTPUT_IMG_DIR, exist_ok=True)
+os.makedirs(OUTPUT_IMG_DIR, exist_ok=True)  
 os.makedirs(OUTPUT_JSON_DIR, exist_ok=True)
 
 # === Load trained model ===

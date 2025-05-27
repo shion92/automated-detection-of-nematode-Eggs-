@@ -17,14 +17,17 @@ CONFIGS = [
     # {"name": "yolov8s_default_xmosaic", "mosaic": 0},
 
     # No mosaic + cutout + flips https://docs.ultralytics.com/guides/yolo-data-augmentation/#auto-augment-auto_augment
-    {"name": "yolov8s_default_xmosaic_cutout", "mosaic": 0, "erasing": 0.6, "fliplr": 1.0, "flipud": 0.5},
+    # {"name": "yolov8s_default_xmosaic_cutout", "mosaic": 0, "erasing": 0.6, "fliplr": 1.0, "flipud": 0.5},
 
     # # SGD variants
     # {"name": "yolov8s_sgd_lr001", "optimizer": "SGD", "lr0": 0.01},
     # {"name": "yolov8s_sgd_lr0005", "optimizer": "SGD", "lr0": 0.005},
     # {"name": "yolov8s_sgd_lr0001", "optimizer": "SGD", "lr0": 0.001},
-    {"name": "yolov8s_sgd_lr0001_xmosaic_cutout", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.6},
-    {"name": "yolov8s_sgd_lr0001_xmosaic_cutout", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.6, "fliplr": 1.0, "flipud": 0.5},
+    
+    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.6}, # best 
+    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.6, "fliplr": 1.0, "flipud": 0.5}, # best 
+    {"name": "yolov8s_sgd_lr0001_xmosaic_cutout", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, # best 
+
 
     # # Adam variants
     # {"name": "yolov8s_adam_lr001", "optimizer": "Adam", "lr0": 0.01},
@@ -64,6 +67,38 @@ def train_model(config: dict):
     model = YOLO(args["model"])
     model.train(**args)
 
+    # Return trained model weight path
+    return os.path.join(args["project"], args["name"], "weights", "best.pt")
+# -------------------------
+# Evaluation Function
+# -------------------------
+def evaluate_model(weight_path: str, config_name: str):
+    model = YOLO(weight_path)
+    model.val(
+        data=COMMON_ARGS["data"],
+        project=f"Processed_Images/YOLO/{config_name}",
+        name="val",
+        save_json=True,
+        verbose=True,
+        save_txt=True
+    )
+
+# -------------------------
+# Prediction Function
+# -------------------------
+def predict_model(weight_path: str, config_name: str):
+    model = YOLO(weight_path)
+    model.predict(
+        source="dataset/test/images",
+        project=f"Processed_Images/YOLO/{config_name}",
+        name="test",
+        save_json=True,
+        save_txt=True,
+        save_conf=True,
+        verbose=True
+    )
+
+
 # -------------------------
 # Main
 # -------------------------
@@ -85,8 +120,16 @@ if __name__ == "__main__":
     logging.info("=== Starting YOLOv8s training runs... ===")
 
     for config in CONFIGS:
-        logging.info(f"Training config: {config['name']}")
-        train_model(config)
-        logging.info(f"Finished training: {config['name']}")
+        config_name = config["name"]
+        logging.info(f"Training config: {config_name}")
+        weight_path = train_model(config.copy())
+        logging.info(f"Finished training: {config_name}")
 
-    logging.info(f"\n✅ Done! Total runtime: {time.time() - start:.2f} seconds.")
+        logging.info(f"Evaluating model: {config_name}")
+        evaluate_model(weight_path, config_name)
+
+        logging.info(f"Predicting test images for: {config_name}")
+        predict_model(weight_path, config_name)
+
+    total_time = time.time() - start
+    logging.info(f"\n✅ All runs complete in {total_time:.1f} seconds")
