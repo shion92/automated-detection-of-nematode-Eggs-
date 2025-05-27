@@ -1,58 +1,82 @@
+# -------------------------
+# Imports
+# -------------------------
 import os
 import json
-from ultralytics import YOLO
 import cv2
 from tqdm import tqdm
 
-# === Config ===
-MODEL_PATH = "runs/detect/train/weights/best.pt"
+# -------------------------
+# Configuration
+# -------------------------
+MODEL_NAME = "yolov8s_sgd_lr0001_xmosaic_cutout"  # change as needed
 IMAGE_DIR = "dataset/test/images"
-OUTPUT_IMG_DIR = "Processed_Image/yolo"
-OUTPUT_JSON_DIR = "Processed_Image/yolo"
+LABEL_DIR = f"Processed_Images/YOLO/{MODEL_NAME}/test/labels"
+OUTPUT_IMG_DIR = os.path.join(os.path.dirname(LABEL_DIR),"images")
+# OUTPUT_JSON_DIR = f"Processed_Images/YOLO/{MODEL_NAME}/json_predictions"
 CONFIDENCE_THRESHOLD = 0.5
+IMAGE_SIZE = (608, 608)  # used for scaling YOLO format to absolute pixel coordinates
 
-# === Create output folders ===
-os.makedirs(OUTPUT_IMG_DIR, exist_ok=True)  
-os.makedirs(OUTPUT_JSON_DIR, exist_ok=True)
+# -------------------------
+# Directory Setup
+# -------------------------
+os.makedirs(OUTPUT_IMG_DIR, exist_ok=True)
 
-# === Load trained model ===
-model = YOLO(MODEL_PATH)
-
-# === Run prediction and save output ===
-for image_name in tqdm(os.listdir(IMAGE_DIR), desc="Predicting"):
+# -------------------------
+# Draw Predictions from Label Files
+# -------------------------
+for image_name in tqdm(os.listdir(IMAGE_DIR), desc="Rendering predictions"):
     if not image_name.lower().endswith(('.png', '.jpg', '.jpeg', '.tif', '.tiff')):
         continue
 
+    base_name = os.path.splitext(image_name)[0]
+    label_path = os.path.join(LABEL_DIR, f"{base_name}.txt")
     image_path = os.path.join(IMAGE_DIR, image_name)
-    result = model(image_path)[0]
+
+    if not os.path.exists(label_path):
+        continue  # skip if prediction not available
 
     image = cv2.imread(image_path)
+    height, width = image.shape[:2]
+
     pred_boxes = []
     pred_scores = []
 
-    for box in result.boxes:
-        score = float(box.conf)
-        if score < CONFIDENCE_THRESHOLD:
-            continue
+    with open(label_path, "r") as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) < 6:
+                continue
+            class_id, cx, cy, w, h, conf = map(float, parts)
+            if conf < CONFIDENCE_THRESHOLD:
+                continue
 
-        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
-        pred_boxes.append([x1, y1, x2, y2])
-        pred_scores.append(round(score, 4))
+            # Convert YOLO format to (x1, y1, x2, y2)
+            cx, cy, w, h = cx * width, cy * height, w * width, h * height
+            x1 = int(cx - w / 2)
+            y1 = int(cy - h / 2)
+            x2 = int(cx + w / 2)
+            y2 = int(cy + h / 2)
 
-        # Draw box on image
-        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        label = f"{result.names[int(box.cls)]} {score:.2f}"
-        cv2.putText(image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+            pred_boxes.append([x1, y1, x2, y2])
+            pred_scores.append(round(conf, 4))
+
+            # Draw bounding box
+            label = f"class_{int(class_id)} {conf:.2f}"
+            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(image, label, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX,
+                        0.5, (0, 255, 0), 1)
 
     # Save annotated image
-    output_image_path = os.path.join(OUTPUT_IMG_DIR, image_name)
-    cv2.imwrite(output_image_path, image)
+    output_img_path = os.path.join(OUTPUT_IMG_DIR, image_name)
+    cv2.imwrite(output_img_path, image)
+    
 
-    # Save prediction JSON
-    json_output = {
-        "boxes": pred_boxes,
-        "scores": pred_scores
-    }
-    output_json_path = os.path.join(OUTPUT_JSON_DIR, image_name.replace(".tif", ".json"))
-    with open(output_json_path, "w") as f:
-        json.dump(json_output, f, indent=2)
+    # # Save predictions in JSON format
+    # json_output = {
+    #     "boxes": pred_boxes,
+    #     "scores": pred_scores
+    # }
+    # output_json_path = os.path.join(OUTPUT_JSON_DIR, base_name + ".json")
+    # with open(output_json_path, "w") as f:
+    #     json.dump(json_output, f, indent=2)
