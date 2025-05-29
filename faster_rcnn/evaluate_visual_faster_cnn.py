@@ -23,7 +23,7 @@ from tqdm import tqdm
 # -------------------------
 # Configuration
 # -------------------------
-SPLIT = "test" # change as needed
+SPLIT = "val" # change as needed
 IMAGE_DIR = f"dataset/{SPLIT}/images"
 backbone_name = "resnet50" 
 lr = 0.005  # change as needed

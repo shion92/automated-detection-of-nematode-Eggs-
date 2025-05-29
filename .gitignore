@@ -76,4 +76,5 @@ faster_rcnn/faster_rcnn_with_cv.py
 faster_rcnn/faster_rcnn_with_cv.py
 /YOLO/iteration_1.1
 /YOLO/iteration_1
-
+/dataset_seg
+/YOLO/summary

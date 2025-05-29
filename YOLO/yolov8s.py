@@ -11,7 +11,7 @@ from ultralytics import YOLO
 # -------------------------
 CONFIGS = [
     # # Default with mosaic
-    # {"name": "yolov8s_default", "mosaic": 1.0},
+    # {"name": "yolov8s_default"},
 
     # # No mosaic
     # {"name": "yolov8s_default_xmosaic", "mosaic": 0},
@@ -22,32 +22,56 @@ CONFIGS = [
     # # SGD variants
     # {"name": "yolov8s_sgd_lr001", "optimizer": "SGD", "lr0": 0.01},
     # {"name": "yolov8s_sgd_lr0005", "optimizer": "SGD", "lr0": 0.005},
-    # {"name": "yolov8s_sgd_lr0001", "optimizer": "SGD", "lr0": 0.001},
+    # {"name": "yolov8s_sgd_lr0001", "optimizer": "SGD", "lr0": 0.001},  # best 
     
     # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.6}, # best 
-    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.6, "fliplr": 1.0, "flipud": 0.5}, # best 
-    {"name": "yolov8s_sgd_lr0001_xmosaic_cutout", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, # best 
-
-
+    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_3", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.6, "fliplr": 1.0, "flipud": 0.5}, # best 
+    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_4", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5}, # best 
+    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_degree_90", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, 
+    
+     # SGD variants - strong mix 
+    {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50}, 
+    {"name": "yolov8s_sgd_lr0001_xmosaic_cutmix_eras", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5,  "epochs": 300, "patience": 50},  
+    {"name": "yolov8s_sgd_lr0001_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},   
+    {"name": "yolov8s_adam_lr0001_xmosaic", "optimizer": "Adam", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, 
+    
+    
+    
     # # Adam variants
-    # {"name": "yolov8s_adam_lr001", "optimizer": "Adam", "lr0": 0.01},
-    # {"name": "yolov8s_adam_lr0005", "optimizer": "Adam", "lr0": 0.005},
-    # {"name": "yolov8s_adam_lr0001", "optimizer": "Adam", "lr0": 0.001},
+    # {"name": "yolov8s_adam_lr001", "optimizer": "Adam", "lr0": 0.01, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 0},
+    # {"name": "yolov8s_adam_lr0005", "optimizer": "Adam", "lr0": 0.005, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 0},
+    # {"name": "yolov8s_adam_lr0001", "optimizer": "Adam", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 0}, # best 
+    
+    # {"name": "yolov8s_adam_lr0012", "optimizer": "Adam", "lr0": 0.01, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 90},
+    # {"name": "yolov8s_adam_lr00052", "optimizer": "Adam", "lr0": 0.005, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 90},
+    # {"name": "yolov8s_adam_lr00012", "optimizer": "Adam", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 90}, # best
 
     # # AdamW variants
-    # {"name": "yolov8s_adamw_lr001", "optimizer": "AdamW", "lr0": 0.01},
-    # {"name": "yolov8s_adamw_lr0005", "optimizer": "AdamW", "lr0": 0.005},
-    # {"name": "yolov8s_adamw_lr0001", "optimizer": "AdamW", "lr0": 0.001},
+    # {"name": "yolov8s_adamw_lr001", "optimizer": "AdamW", "lr0": 0.01, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5},
+    # {"name": "yolov8s_adamw_lr0005", "optimizer": "AdamW", "lr0": 0.005, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5},
+    # {"name": "yolov8s_adamw_lr0001", "optimizer": "AdamW", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, # best
+    
+    
+     # === YOLOv8m (larger object detection model) ===
+    {"name": "yolov8m_sgd_lr0001", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
+    {"name": "yolov8m_sgd_lr0001_max", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
+    
+    # === YOLOv8-seg for instance segmentation ===
+    {"name": "yolov8s_seg_lr0001", "model": "yolov8s-seg.pt", "data": "data_seg.yaml", "task": "segment", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.0, "fliplr": 1.0, "flipud": 0.5, "epochs": 200, "patience": 30},
+    {"name": "yolov8s_seg_lr0001_eras", "model": "yolov8s-seg.pt", "data": "data_seg.yaml", "task": "segment", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 200, "patience": 30}
+    
+    
 ]
 
 COMMON_ARGS = {
     "model": "YOLO/yolov8s.pt",
     "data": "data.yaml",
-    "epochs": 200,
+    "task": "detect",
+    "epochs": 2,
     "imgsz": 608,
     "batch": 16,
     "patience": 30,
-    "degrees": 10,
+    "degrees": 90,
     "translate": 0.1,
     "scale": 0.2,
     "shear": 2,
@@ -72,10 +96,11 @@ def train_model(config: dict):
 # -------------------------
 # Evaluation Function
 # -------------------------
-def evaluate_model(weight_path: str, config_name: str):
+def evaluate_model(weight_path: str, config_name: str,  task: str):
     model = YOLO(weight_path)
     model.val(
         data=COMMON_ARGS["data"],
+        task=task,
         project=f"Processed_Images/YOLO/{config_name}",
         name="val",
         save_json=True,
@@ -86,10 +111,11 @@ def evaluate_model(weight_path: str, config_name: str):
 # -------------------------
 # Prediction Function
 # -------------------------
-def predict_model(weight_path: str, config_name: str):
+def predict_model(weight_path: str, config_name: str, task: str):
     model = YOLO(weight_path)
     model.predict(
         source="dataset/test/images",
+        task=task,
         project=f"Processed_Images/YOLO/{config_name}",
         name="test",
         save_json=True,
@@ -121,15 +147,17 @@ if __name__ == "__main__":
 
     for config in CONFIGS:
         config_name = config["name"]
+        task = config.get("task", "detect") 
+        
         logging.info(f"Training config: {config_name}")
         weight_path = train_model(config.copy())
         logging.info(f"Finished training: {config_name}")
 
         logging.info(f"Evaluating model: {config_name}")
-        evaluate_model(weight_path, config_name)
+        evaluate_model(weight_path, config_name, task)
 
         logging.info(f"Predicting test images for: {config_name}")
-        predict_model(weight_path, config_name)
+        predict_model(weight_path, config_name, task)
 
     total_time = time.time() - start
     logging.info(f"\n✅ All runs complete in {total_time:.1f} seconds")
