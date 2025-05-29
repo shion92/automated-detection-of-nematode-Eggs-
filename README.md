@@ -25,9 +25,9 @@ automated-detection-of-nematode-Eggs-/
 │   ├── val
 │   │   └── ...
 ├── DeepLab/               # DeepLabV3+ segmentation scripts and configs
-│   ├── deeplab_training.py # Training or fine-tuning 
+│   ├── deeplab_training.py        # Training or fine-tuning 
 │   ├── evaluate_visual_deeplab.py # Perform evaluation + visualisation 
-│   ├── inference_deeplab_model.py # Run prediction separately if needed (it's usually integrated with training).
+│   ├── inference_deeplab_model.py # Run prediction separately if needed (it's usually integrated with training)
 │   └── ...
 ├── Faster_rcnn/           # Faster R-CNN detection scripts and configs
 │   ├── faster_rcnn.py
@@ -41,7 +41,7 @@ automated-detection-of-nematode-Eggs-/
 │   └── ...
 ├── Processed_Images/      # Model predictions and visualisations
 ├── model/                 # Saved model weights and checkpoints
-├── Prep/                  # Data preparation and splitting scripts
+├── Helper/                # Utility functions, particularly for converting .tif image files into formats suitable for training
 │   ├── split_prep_sample.py
 │   └── ...
 ├── evaluation/            # Evaluation metrics, running logs and Tensorboard logs
@@ -54,74 +54,42 @@ automated-detection-of-nematode-Eggs-/
 
 ## Main Components
 
-### 1. **Data Preparation**
-- Scripts in `Prep/` split raw data into train/val/test sets and convert annotation formats (Pascal VOC XML to YOLO, etc.).
-- Example: `split_prep_sample.py` for dataset splitting.
+### 1. **Data Preparation for Training **
+- Script in `Helper/` to split raw data into train/val/test sets 
+- Convert images to formats that suitable for training (e.g., Pascal VOC XML to YOLO readable .txt, etc.).
 
 ### 2. **Model Training & Tuning**
 - **Faster R-CNN:**  
-  - `faster_rcnn/faster_rcnn.py` for training and fine-tuning with different learning rates and optimizers.
+  - `Faster_rcnn/faster_rcnn.py` for training and fine-tuning with different learning rates and backbones.
 - **YOLOv8:**  
-  - `YOLO/train_yolov8n.sh` for training YOLOv8 models with various hyperparameters and optimizers.
+  - `YOLO/yolo_training.py` for training YOLOv8 models with various hyperparameters and optimisers.
 - **DeepLabV3+:**  
-  - `DeepLab/deeplab_training.py` for semantic segmentation training.
+  - `DeepLab/deeplab_training.py` for segmentation training.
 
 ### 3. **Inference & Prediction**
-- `faster_rcnn/inference_faster_rcnn.py` and similar scripts for running inference on trained models and saving predictions.
+- `inference_faster_rcnn.py` for example, is a script for running inference on trained models and saving predictions. It is built to run inference separately if needed, which usually is already integrated into the training pipeline. 
+- Outputs are typically saved in `/Processed_Images`
 
 ### 4. **Evaluation & Visualization**
-- `DeepLab/evaluate_visual_deeplab.py`, `faster_rcnn/evaluate_visual_faster_cnn.py` for evaluating predictions (precision, recall, F1, mAP, PR curves).
-- `DeepLab/visual_auc.py` and similar scripts for plotting metrics and visualizing results.
+- `DeepLab/evaluate_visual_deeplab.py`, `faster_rcnn/evaluate_visual_faster_cnn.py` etc for evaluating predictions (precision, recall, F1, mAP, PR curves). Outputs are typically saved in `evaluation`.
+- For YOLO, TensorBoard was used to compare different YOLO model variants.
+
 
 ---
-
 ## How to Use
+**Install Dependencies**
 
-1. **Prepare Data:**  
-   Place raw images and annotation files in the `Data/` folder. Use scripts in `Prep/` to split and convert data as needed.
+Ensure Python 3.11.9 is installed, then install the required packages:
 
-2. **Train Models:**  
-   - For Faster R-CNN:  
-     ```bash
-     python faster_rcnn/faster_rcnn.py
-     ```
-   - For YOLOv8:  
-     ```bash
-     bash YOLO/train_yolov8n.sh
-     ```
-   - For DeepLabV3+:  
-     ```bash
-     python DeepLab/deeplab_training.py
-     ```
-
-3. **Run Inference:**  
-   Use the provided inference scripts in each model folder to generate predictions.
-
-4. **Evaluate & Visualize:**  
-   Use evaluation scripts to compute metrics and visualize results. Outputs are saved in [Processed_Images](http://_vscodecontentref_/2) and [evaluation](http://_vscodecontentref_/3).
+```bash
+   pip install -r requirements.txt
+```
 
 ---
+## Debug notes
 
-## Requirements
-
-- Python 3.8+
-- PyTorch, torchvision
-- Ultralytics YOLOv8
-- segmentation_models_pytorch
-- albumentations
-- scikit-learn
-- matplotlib
-- tqdm
-- PIL
-- (See [requirements.txt](http://_vscodecontentref_/4) for full list)
-
----
-
-## Notes
-
-- All scripts are modular and can be run independently.
 - Adjust paths and hyperparameters as needed for your experiments.
-- ....
+- Refers to Helper/label_instruction.md if you have any questions around labeling. 
 
 ---
 
