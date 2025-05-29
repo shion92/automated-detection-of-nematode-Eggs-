@@ -1,34 +1,50 @@
 # Automated Detection of Nematode Eggs
 
-This repository contains all code, scripts, and documentation for the automated detection of nematode eggs using deep learning. The project supports training, fine-tuning, evaluation, prediction, and visualization for both object detection (Faster R-CNN, YOLOv8) and segmentation (DeepLabV3+) models.
+This repository contains main scripts, and documentation for the automated detection of nematode eggs using deep learning. 
+
+The project supports training, fine-tuning, evaluation, prediction, and visualisation for Faster R-CNN, YOLOv8s and DeepLabV3+ models.
 
 ---
 
-## Folder Structure
+## Folder Structure 
+
+This Git repository does not include image, CSV, or other data files. To access these, please send a request to shionshine@gmail.com. 
 
 ```
 automated-detection-of-nematode-Eggs-/
-├── Data/                  # Raw images and annotation files
+├── Data/                  # Raw microscopic images and annotation files
 ├── dataset/               # Processed datasets (train/val/test splits, YOLO labels, DeepLab masks etc.)
+│   ├── test
+│   │   ├── annotaions     # .xml files for bounding box annotations
+│   │   ├── images         # .tif image files
+│   │   ├── json           # .json files. Faster RCNN training requires.
+│   │   ├── labels         # .txt files. YOLO training requires.
+│   │   └── masks          # .png files. DeepLab training requires. 
+│   ├── train
+│   │   └── ...
+│   ├── val
+│   │   └── ...
 ├── DeepLab/               # DeepLabV3+ segmentation scripts and configs
-│   ├── deeplab_training.py
-│   ├── evaluate_visual_deeplab.py
-│   ├── visual_auc.py
+│   ├── deeplab_training.py # Training or fine-tuning 
+│   ├── evaluate_visual_deeplab.py # Perform evaluation + visualisation 
+│   ├── inference_deeplab_model.py # Run prediction separately if needed (it's usually integrated with training).
 │   └── ...
-├── faster_rcnn/           # Faster R-CNN detection scripts and configs
+├── Faster_rcnn/           # Faster R-CNN detection scripts and configs
 │   ├── faster_rcnn.py
 │   ├── evaluate_visual_faster_cnn.py
 │   ├── inference_faster_rcnn.py
 │   └── ...
-├── YOLO/                  # YOLOv8 training and conversion scripts
-│   ├── train_yolov8n.sh
+├── YOLO/                  # YOLOv8 training scripts
+│   ├── yolo_training.py
+│   ├── evaluate_YOLO.py
+│   ├── visual_yolo_prediction.py 
 │   └── ...
 ├── Processed_Images/      # Model predictions and visualisations
 ├── model/                 # Saved model weights and checkpoints
 ├── Prep/                  # Data preparation and splitting scripts
 │   ├── split_prep_sample.py
 │   └── ...
-├── evaluation/            # Evaluation metrics and logs
+├── evaluation/            # Evaluation metrics, running logs and Tensorboard logs
 ├── README.md              # Project documentation (this file)
 └── requirements.txt       # Python dependencies
 ```
