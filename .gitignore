@@ -27,6 +27,9 @@ venv 2/
 *.xml
 *.pt
 /model
+/Log
+/OpenCV
+
 
 
 
