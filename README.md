@@ -4,6 +4,8 @@ This repository contains main scripts, and documentation for the automated detec
 
 The project supports training, fine-tuning, evaluation, prediction, and visualisation for Faster R-CNN, YOLOv8s and DeepLabV3+ models.
 
+![Nematode Egg Detection](image.png)
+
 ---
 
 ## Folder Structure 
