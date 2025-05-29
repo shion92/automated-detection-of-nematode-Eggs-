@@ -19,7 +19,6 @@ faster_rcnn_nematode.pth
 venv 2/
 *.jpg
 *.jpeg
-*.png
 *.gif
 *.tiff
 *.csv
