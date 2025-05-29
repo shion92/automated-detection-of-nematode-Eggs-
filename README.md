@@ -1,10 +1,18 @@
+
+<div align="center">
 # Automated Detection of Nematode Eggs
 
 This repository contains main scripts, and documentation for the automated detection of nematode eggs using deep learning. 
 
 The project supports training, fine-tuning, evaluation, prediction, and visualisation for Faster R-CNN, YOLOv8s and DeepLabV3+ models.
 
-![Nematode Egg Detection](image.png)
+![Nematode Egg Detection](Helper/image.png)
+
+</div>
+
+[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
+[![GitHub Repo stars](https://img.shields.io/github/stars/shion92/automated-detection-of-nematode-Eggs-)](https://github.com/shion92/automated-detection-of-nematode-Eggs-/stargazers)
+[![Issues](https://img.shields.io/github/issues/shion92/automated-detection-of-nematode-Eggs-)](https://github.com/shion92/automated-detection-of-nematode-Eggs-/issues)
 
 ---
 
