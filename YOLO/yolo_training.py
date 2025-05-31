@@ -30,10 +30,10 @@ CONFIGS = [
     # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_degree_90", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, 
     
      # SGD variants - strong mix 
-    {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50}, 
-    {"name": "yolov8s_sgd_lr0001_xmosaic_cutmix_eras", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5,  "epochs": 300, "patience": 50},  
-    {"name": "yolov8s_sgd_lr0001_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},   
-    {"name": "yolov8s_adam_lr0001_xmosaic", "optimizer": "Adam", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, 
+    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50}, 
+    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutmix_eras", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5,  "epochs": 300, "patience": 50},  
+    # {"name": "yolov8s_sgd_lr0001_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},   
+    # {"name": "yolov8s_adam_lr0001_xmosaic", "optimizer": "Adam", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, 
     
     
     
@@ -53,18 +53,18 @@ CONFIGS = [
     
     
      # === YOLOv8m (larger object detection model) ===
-    {"name": "yolov8m_sgd_lr0001", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
-    {"name": "yolov8m_sgd_lr0001_max", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
+    # {"name": "yolov8m_sgd_lr0001", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
+    # {"name": "yolov8m_sgd_lr0001_max", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
     
     # === YOLOv8-seg for instance segmentation ===
-    {"name": "yolov8s_seg_lr0001", "model": "yolov8s-seg.pt", "data": "data_seg.yaml", "task": "segment", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.0, "fliplr": 1.0, "flipud": 0.5, "epochs": 200, "patience": 30},
+    # {"name": "yolov8s_seg_lr0001", "model": "yolov8s-seg.pt", "data": "data_seg.yaml", "task": "segment", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.0, "fliplr": 1.0, "flipud": 0.5, "epochs": 200, "patience": 30},
     {"name": "yolov8s_seg_lr0001_eras", "model": "yolov8s-seg.pt", "data": "data_seg.yaml", "task": "segment", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 200, "patience": 30}
     
     
 ]
 
 COMMON_ARGS = {
-    "model": "YOLO/yolov8s.pt",
+    "model": "yolov8s.pt",
     "data": "data.yaml",
     "task": "detect",
     "epochs": 2,

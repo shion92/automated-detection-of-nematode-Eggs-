@@ -28,7 +28,7 @@ from faster_rcnn import predict_and_save, NUM_CLASSES, SAVE_DIR, DEVICE
 # -------------------------
 # Configuration
 # -------------------------
-backbone_name = "resnet50"  # or "resnet34"
+backbone_name = "resnet34"  #  "resnet34" or "resnet50"
 
 # -------------------------
 # Main
@@ -72,7 +72,7 @@ if __name__ == "__main__":
             model = fasterrcnn_resnet50_fpn(weights=weights)
         elif backbone_name == "resnet34":
             backbone_net = resnet_fpn_backbone('resnet34', pretrained=True)
-            model = FasterRCNN(backbone_net)
+            model = FasterRCNN(backbone_net, num_classes=NUM_CLASSES)
         else:
             raise ValueError(f"Unsupported backbone: {backbone_name}. Use 'resnet50' or 'resnet34'.")
 

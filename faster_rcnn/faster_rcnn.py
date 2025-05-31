@@ -33,11 +33,11 @@ CLASS_NAMES = ["__background__", "nematode egg"]
 TRAIN_DIR = "dataset/train"
 VAL_DIR = "dataset/val"
 TEST_DIR = "dataset/test"
-backbone_name = "resnet50"  # or "resnet34"
+backbone_name = "resnet34" # "resnet50"  # or "resnet34"
 PRED_OUTPUT_DIR = f"Processed_Images/faster_rcnn_{backbone_name}/Predictions"
 num_epochs = 100
 lr_list = [
-    0.01, 
+    # 0.01, 
     0.005,
     0.001,
     0.0005, 
@@ -47,16 +47,6 @@ IMG_SIZE = 512  # Resize images to (512,512)
 SAVE_DIR = f"model/faster_rcnn/{backbone_name}"
 os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(PRED_OUTPUT_DIR, exist_ok=True)
-
-# -------------------------
-# Reproducibility
-# -------------------------
-def set_seed(seed=42):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.backends.mps.is_available():
-        torch.mps.manual_seed(seed)
 
 # -------------------------
 #  Albumentations pipeline
@@ -188,8 +178,7 @@ def get_loader(root, batch_size=2, transforms=F.to_tensor):
 # -------------------------
 # Training Loop
 # -------------------------
-def train_model(num_epochs, lr=0.001, patience=10, min_delta=1e-4):
-    set_seed()
+def train_model(num_epochs, lr=0.001, patience=30, min_delta=1e-4):
 
     train_loader = get_loader(TRAIN_DIR, transforms=get_train_transforms())
     val_loader = get_loader(VAL_DIR)
@@ -199,7 +188,7 @@ def train_model(num_epochs, lr=0.001, patience=10, min_delta=1e-4):
     
     # Per-LR output directories
     run_id = f"lr_{lr}"
-    metrics_dir = os.path.join("evaluation", "faster_rcnn", run_id)
+    metrics_dir = os.path.join("evaluation", "faster_rcnn", backbone_name, run_id)
     os.makedirs(metrics_dir, exist_ok=True)
 
     if backbone_name == "resnet50":
@@ -210,7 +199,7 @@ def train_model(num_epochs, lr=0.001, patience=10, min_delta=1e-4):
     elif backbone_name == "resnet34":
         # Use pre-trained FasterRCNN with ResNet34 backbone
         backbone_net = resnet_fpn_backbone('resnet34', pretrained=True)
-        model = FasterRCNN(backbone_net)
+        model = FasterRCNN(backbone_net, num_classes=NUM_CLASSES)
     else:
         raise ValueError(f"Unsupported backbone: {backbone_name}. Use 'resnet50' or 'resnet34'.")
 
@@ -339,8 +328,12 @@ def predict_and_save(model, split="test", lr=0.001):
                 "scores": [round(float(s), 4) for s in filtered_scores]
             }
 
-            out_path = os.path.join(PRED_OUTPUT_DIR, run_id, split, names[0].replace(".tif", ".json"))
-            with open(out_path, 'w') as f:
+            PRED_OUTPUT_PATH = os.path.join(PRED_OUTPUT_DIR, run_id, split)
+            os.makedirs(PRED_OUTPUT_PATH, exist_ok=True)
+            
+            out_file = os.path.join(PRED_OUTPUT_PATH, names[0].replace(".tif", ".json"))
+            
+            with open(out_file, 'w') as f:
                 json.dump(pred_json, f, indent=2)
                 
             print(f"✅ Done predicting {split} set. Skipped {skipped} images.")
@@ -352,7 +345,7 @@ def predict_and_save(model, split="test", lr=0.001):
 if __name__ == "__main__":
     os.makedirs("Log", exist_ok=True)
     logging.basicConfig(
-        filename="Log/faster_rcnn_training_v2.log",
+        filename="Log/faster_rcnn_training_v3.log",
         filemode="w",
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s"
@@ -367,11 +360,9 @@ if __name__ == "__main__":
     logging.info("=== Starting Faster R-CNN training ===")
 
     for lr in lr_list:  # Define this list before the loop, e.g. lr_list = [0.001, 0.0005, 0.0001]
-        # logging.info(f"\n=== Training with learning rate = {lr} ===")
-        # model = train_model(num_epochs=num_epochs, lr=lr)  # Ensure train_model accepts learning_rate
-        # logging.info(f"✅ Training complete for lr = {lr}")
-        
-        model 
+        logging.info(f"\n=== Training with learning rate = {lr} ===")
+        model = train_model(num_epochs=num_epochs, lr=lr)  # Ensure train_model accepts learning_rate
+        logging.info(f"✅ Training complete for lr = {lr}")
 
         logging.info(f"=== Running inference for lr = {lr} ===")
         for split in ["test", "val", "train"]:

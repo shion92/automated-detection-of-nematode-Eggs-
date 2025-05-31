@@ -8,6 +8,7 @@ from sklearn.metrics import precision_recall_curve, auc
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from tqdm import tqdm
+import hashlib
 
 # -------------------------
 # this script evaluate the predictions of Faster R-CNN/YOLO for the following:
@@ -25,8 +26,8 @@ from tqdm import tqdm
 # -------------------------
 SPLIT = "val" # change as needed
 IMAGE_DIR = f"dataset/{SPLIT}/images"
-backbone_name = "resnet50" 
-lr = 0.005  # change as needed
+backbone_name = "resnet34"  # "resnet50"  # or "resnet34"
+lr = 0.01  # change as needed
 PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn_{backbone_name}/Predictions/lr_{lr}/{SPLIT}"
 ANN_DIR = f"dataset/{SPLIT}/annotations"
 IOU_THRESH = 0.5 # change as needed
@@ -74,11 +75,33 @@ def load_predictions(pred_dir):
     for jf in glob(os.path.join(pred_dir, "*.json")):
         img_id = os.path.basename(jf).replace(".json", ".tif")
         obj = json.load(open(jf))
-        preds[img_id] = {
-            "boxes":  np.array(obj.get("boxes", [])),
-            "scores": np.array(obj.get("scores", []))
-        }
+
+        # Deal with COCO-style list format
+        if isinstance(obj, list):
+            boxes, scores = [], []
+            for item in obj:
+                if "bbox" in item and "score" in item:
+                    x, y, w, h = item["bbox"]
+                    boxes.append([x, y, x + w, y + h])
+                    scores.append(item["score"])
+            preds[img_id] = {
+                "boxes": np.array(boxes),
+                "scores": np.array(scores)
+            }
+
+        # Deal with standard format like {"boxes": [...], "scores": [...]}
+        elif isinstance(obj, dict):
+            preds[img_id] = {
+                "boxes": np.array(obj.get("boxes", [])),
+                "scores": np.array(obj.get("scores", []))
+            }
+
+        else:
+            print(f"Warning: {jf} format unrecognised. Skipping.")
+            continue
+
     return preds
+
 
 # -------------------------
 # 3) Matching logic for one threshold
@@ -146,13 +169,23 @@ def compute_pr_curve(all_scores, all_labels):
 # -------------------------
 # 6) COCO mAP evaluation
 # -------------------------
+def extract_id_from_filename(filename):
+    """Extract numeric ID from filenames like 'Image_62.tif'."""
+    base = os.path.basename(filename)
+    number_part = base.replace("Image_", "").replace(".tif", "")
+    return int(number_part)
+
 def write_coco_gt(gt, out_path):
     coco = {"images":[], "annotations":[], "categories":[{"id":1,"name":"nematode egg"}]}
     ann_id = 1
-    for img_id, boxes in gt.items():
-        coco["images"].append({"file_name":img_id, "id":img_id})
+    img_id_map = {}
+
+    for filename, boxes in gt.items():
+        img_id = extract_id_from_filename(filename)
+        img_id_map[filename] = img_id
+        coco["images"].append({"file_name": filename, "id": img_id})
         for b in boxes:
-            x1,y1,x2,y2 = map(int, b)
+            x1, y1, x2, y2 = map(int, b)
             w, h = x2 - x1, y2 - y1
             coco["annotations"].append({
                 "id":ann_id, 
@@ -163,12 +196,19 @@ def write_coco_gt(gt, out_path):
                 "iscrowd":0
             })
             ann_id += 1
+
     with open(out_path,"w") as f:
         json.dump(coco, f)
 
-def write_coco_preds(preds, out_path):
+    return img_id_map
+
+def write_coco_preds(preds, out_path, img_id_map):
     coco_results = []
-    for img_id, p in preds.items():
+    for filename, p in preds.items():
+        img_id = img_id_map.get(filename)
+        if img_id is None:
+            print(f"Warning: Skipping {filename} (not found in ground truth)")
+            continue
         for box, score in zip(p["boxes"], p["scores"]):
             x1,y1,x2,y2 = map(int, box)
             coco_results.append({
@@ -209,15 +249,21 @@ def compute_coco_map(gt_json, pred_json, out_json=None):
 # 7a) Visualisation
 # -------------------------
 
-def draw_legend(image):
+def draw_legend(image, image_id=None):
     cv2.rectangle(image, (10, 10), (300, 90), (255, 255, 255), -1)  # white background box
     cv2.putText(image, 'Legend:', (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
     cv2.putText(image, 'Ground Truth (Blue)', (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
     cv2.putText(image, 'Faster R-CNN Prediction (Green, IoU, Conf)', (20, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+    if image_id is not None:
+        cv2.putText(image, f'Image ID: {image_id}', (20, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+    
     return image
 
 
 def draw_boxes(image_path, pred_boxes, pred_scores, gt_boxes):
+    filename = os.path.basename(image_path)
+    image_id = extract_id_from_filename(filename)
+    
     img = cv2.imread(image_path)
 
     # Draw GT boxes in BLUE
@@ -235,7 +281,7 @@ def draw_boxes(image_path, pred_boxes, pred_scores, gt_boxes):
         label = f"IoU: {iou:.2f}, Conf: {pred_scores[i]:.2f}"
         cv2.putText(img, label, (x1, max(y1 - 5, 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 100, 0), 1)
 
-    return draw_legend(img)
+    return draw_legend(img, image_id=image_id)
 
 
 # -------------------------
@@ -278,8 +324,8 @@ if __name__ == "__main__":
     pred_path = os.path.join(VIS_DIR, "preds_coco.json")
     coco_path = os.path.join(VIS_DIR, "coco_metrics.json")
     
-    write_coco_gt(gt,    gt_path)
-    write_coco_preds(preds, pred_path)
+    img_id_map = write_coco_gt(gt, gt_path)
+    write_coco_preds(preds, pred_path, img_id_map)
     compute_coco_map(gt_path, pred_path, out_json = coco_path)
     
     print(f"✅ Saved GT to {gt_path}")

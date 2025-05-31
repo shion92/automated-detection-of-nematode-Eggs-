@@ -104,12 +104,6 @@ def get_train_transform():
         A.Normalize(),
         ToTensorV2(),
         # A.Resize(IMG_SIZE, IMG_SIZE),
-        # A.HorizontalFlip(p=0.5),
-        # A.RandomRotate90(p=0.5),
-        # A.RandomBrightnessContrast(p=0.2),
-        # A.GaussNoise(p=0.2),
-        # A.Normalize(),
-        # ToTensorV2(),
     ])
 
 def get_val_transform():

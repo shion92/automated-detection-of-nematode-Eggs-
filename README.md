@@ -1,5 +1,4 @@
 
-<div align="center">
 # Automated Detection of Nematode Eggs
 
 This repository contains main scripts, and documentation for the automated detection of nematode eggs using deep learning. 
@@ -7,8 +6,6 @@ This repository contains main scripts, and documentation for the automated detec
 The project supports training, fine-tuning, evaluation, prediction, and visualisation for Faster R-CNN, YOLOv8s and DeepLabV3+ models.
 
 ![Nematode Egg Detection](Helper/image.png)
-
-</div>
 
 [![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC%20BY--NC--ND%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 [![GitHub Repo stars](https://img.shields.io/github/stars/shion92/automated-detection-of-nematode-Eggs-)](https://github.com/shion92/automated-detection-of-nematode-Eggs-/stargazers)
@@ -82,7 +79,7 @@ automated-detection-of-nematode-Eggs-/
 
 ### 4. **Evaluation & Visualization**
 - `DeepLab/evaluate_visual_deeplab.py`, `faster_rcnn/evaluate_visual_faster_cnn.py` etc for evaluating predictions (precision, recall, F1, mAP, PR curves). Outputs are typically saved in `evaluation`.
-- For YOLO, TensorBoard was used to compare different YOLO model variants.
+- For YOLO, TensorBoard was used to compare different YOLO model variants. See more https://www.tensorflow.org/tensorboard/get_started 
 
 
 ---
