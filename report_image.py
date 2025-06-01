@@ -11,6 +11,12 @@ from typing import Dict, List, Tuple
 # CONFIGURATION
 # -------------------------
 SPLIT = "test"  # change if needed
+IMAGE_DIR = f"dataset/{SPLIT}/images"
+OUTPUT_DIR = os.path.join("evaluation", "overlays")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+TARGET_CLASS = 0  # Assuming class ID for eggs is 0
+
 
 class ModelConfig:
     """Configuration for different model types"""
@@ -124,12 +130,6 @@ MODEL_CONFIGS = [
     # ),
 ]
 
-OUTPUT_DIR = os.path.join("evaluation", "overlays")
-IMAGE_DIR = f"dataset/{SPLIT}/images"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-TARGET_CLASS = 0  # Assuming class ID for eggs is 0
-
 # -------------------------
 # HELPER FUNCTIONS
 # -------------------------
@@ -154,15 +154,37 @@ def xywh_to_xyxy(box: List[float]) -> List[float]:
     y2 = y + h / 2
     return [x1, y1, x2, y2]
 
-def load_yolo_predictions(folder: str) -> Dict[str, List[Tuple[List[float], float]]]:
+def load_yolo_predictions(folder: str, image_dir: str) -> Dict[str, List[Tuple[List[float], float]]]:
     """
-    Load YOLO format predictions from .txt files.
-    Each line: class_id x_center y_center width height confidence
+    Load YOLO format predictions from .txt files.  
+    Assumes values are normalized [0,1].  
+    Each line: class_id x_center y_center width height confidence  
     Returns dict: {image_name: [([x1,y1,x2,y2], confidence), ...]}
     """
     pred_data = {}
     for txt_file in glob.glob(os.path.join(folder, '*.txt')):
-        image_name = os.path.splitext(os.path.basename(txt_file))[0]
+        image_name = Path(txt_file).stem
+        image_path = os.path.join(image_dir, f"{image_name}.tif")
+        if not os.path.exists(image_path):
+            # Try .jpg or .png if needed
+            image_path_alt = None
+            for ext in ['.jpg', '.png']:
+                alt = os.path.join(image_dir, f"{image_name}{ext}")
+                if os.path.exists(alt):
+                    image_path_alt = alt
+                    break
+            if image_path_alt:
+                image_path = image_path_alt
+            else:
+                print(f"Warning: No matching image for {image_name}, skipping YOLO preds.")
+                continue
+
+        img = cv2.imread(image_path)
+        if img is None:
+            print(f"Warning: Could not read image {image_path}, skipping.")
+            continue
+        h, w = img.shape[:2]
+
         detections = []
         with open(txt_file, 'r') as f:
             for line in f:
@@ -172,11 +194,28 @@ def load_yolo_predictions(folder: str) -> Dict[str, List[Tuple[List[float], floa
                 class_id = int(parts[0])
                 if class_id != TARGET_CLASS:
                     continue
-                coords = list(map(float, parts[1:5]))
+                # Parse normalized coords
+                x_center_rel, y_center_rel, w_rel, h_rel = map(float, parts[1:5])
                 confidence = float(parts[5])
-                bbox = xywh_to_xyxy(coords)
+                # Convert to absolute
+                x_center = x_center_rel * w
+                y_center = y_center_rel * h
+                width_abs = w_rel * w
+                height_abs = h_rel * h
+                bbox_rel = [x_center, y_center, width_abs, height_abs]
+                bbox = xywh_to_xyxy(bbox_rel)
+                # Clip box to image boundaries
+                bbox = [
+                    max(0, min(bbox[0], w - 1)),
+                    max(0, min(bbox[1], h - 1)),
+                    max(0, min(bbox[2], w - 1)),
+                    max(0, min(bbox[3], h - 1))
+                ]
                 detections.append((bbox, confidence))
+
         pred_data[image_name] = sorted(detections, key=lambda x: -x[1])
+    # Debug: print how many YOLO preds loaded
+    print(f"Loaded YOLO predictions from {folder}: {len(pred_data)} images with detections.")
     return pred_data
 
 def load_faster_rcnn_predictions(folder: str) -> Dict[str, List[Tuple[List[float], float]]]:
@@ -208,13 +247,13 @@ def load_faster_rcnn_predictions(folder: str) -> Dict[str, List[Tuple[List[float
             boxes = data['boxes']
             scores = data['scores']
             for box, score in zip(boxes, scores):
-                # Box format assumed [x1, y1, x2, y2]
                 if len(box) == 4:
                     bbox = [float(box[0]), float(box[1]), float(box[2]), float(box[3])]
                     pred_data.setdefault(img_id, []).append((bbox, float(score)))
-        # Sort by score descending
+    # Sort by score descending
     for img in pred_data:
         pred_data[img] = sorted(pred_data[img], key=lambda x: -x[1])
+    print(f"Loaded Faster R-CNN predictions from {folder}: {len(pred_data)} images with detections.")
     return pred_data
 
 def load_binary_mask_png(folder: str) -> Dict[str, np.ndarray]:
@@ -230,6 +269,7 @@ def load_binary_mask_png(folder: str) -> Dict[str, np.ndarray]:
             continue
         binary = (mask > 127).astype(np.uint8)
         mask_data[key] = binary
+    print(f"Loaded PNG masks from {folder}: {len(mask_data)} images.")
     return mask_data
 
 def load_binary_mask_json(folder: str) -> Dict[str, np.ndarray]:
@@ -246,6 +286,7 @@ def load_binary_mask_json(folder: str) -> Dict[str, np.ndarray]:
             arr = np.array(data["mask"])
             binary = (arr >= 0.5).astype(np.uint8)
             mask_data[key] = binary
+    print(f"Loaded JSON masks from {folder}: {len(mask_data)} images.")
     return mask_data
 
 def load_yolo_segmentation_txt(folder: str, image_dir: str, confidence_thresh=0.5) -> Dict[str, np.ndarray]:
@@ -281,6 +322,7 @@ def load_yolo_segmentation_txt(folder: str, image_dir: str, confidence_thresh=0.
                 )
                 cv2.fillPoly(mask, [pts], color=1)
         mask_data[base_name] = mask
+    print(f"Loaded YOLO-seg TXT masks from {folder}: {len(mask_data)} images.")
     return mask_data
 
 # -------------------------
@@ -296,11 +338,10 @@ def main():
     # Load predictions for each model ahead of time
     for idx, cfg in enumerate(MODEL_CONFIGS):
         if cfg.model_type == "yolo":
-            preds = load_yolo_predictions(cfg.pred_folder)
+            preds = load_yolo_predictions(cfg.pred_folder, IMAGE_DIR)
         elif cfg.model_type == "faster_rcnn":
             preds = load_faster_rcnn_predictions(cfg.pred_folder)
         elif cfg.model_type == "segmentation":
-            # Two possible mask formats: PNG or JSON or YOLO-seg txt
             # Try PNG first, then JSON, then YOLO-seg txt
             png_masks = load_binary_mask_png(cfg.pred_folder)
             if png_masks:
@@ -310,7 +351,6 @@ def main():
                 if json_masks:
                     preds = json_masks
                 else:
-                    # YOLOv8-seg style
                     preds = load_yolo_segmentation_txt(cfg.pred_folder, IMAGE_DIR)
         else:
             preds = {}
@@ -333,20 +373,23 @@ def main():
 
             if cfg.model_type in ["yolo", "faster_rcnn"]:
                 detections = preds.get(img_name, [])
+                # Debug: print if there are no detections
+                if cfg.model_type == "yolo" and not detections:
+                    print(f"[DEBUG] No YOLO detections for {cfg.model_name} on {img_name}")
                 for (bbox, score) in detections:
                     x1, y1, x2, y2 = map(int, bbox)
-                    # Draw bounding box
-                    cv2.rectangle(overlay, (x1, y1), (x2, y2), colour, 2)
-                    # Put confidence text
+                    # Draw bounding box (thickness=3)
+                    cv2.rectangle(overlay, (x1, y1), (x2, y2), colour, thickness=3)
+                    # Put confidence text (font scale=0.7, thickness=2)
                     text = f"{cfg.model_name}: {score:.2f}"
                     cv2.putText(
                         overlay,
                         text,
                         (x1, max(y1 - 10, 10)),
                         cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
+                        0.7,
                         colour,
-                        1,
+                        2,
                         lineType=cv2.LINE_AA
                     )
             elif cfg.model_type == "segmentation":
@@ -367,10 +410,10 @@ def main():
         blended = cv2.addWeighted(image, 0.6, overlay, 0.4, 0)
 
         # Draw legend (model colour mapping) at the top-left
-        legend_x, legend_y = 10, 25
+        legend_x, legend_y = 10, 30
         for idx, cfg in enumerate(MODEL_CONFIGS):
             colour = colours[idx]
-            # Draw small filled rectangle
+            # Draw small filled rectangle (20×20)
             cv2.rectangle(
                 blended,
                 (legend_x, legend_y - 15),
@@ -378,18 +421,18 @@ def main():
                 colour,
                 -1
             )
-            # Put model name next to rectangle
+            # Put model name next to rectangle (font scale=0.8, colour=black, thickness=2)
             cv2.putText(
                 blended,
                 cfg.model_name,
                 (legend_x + 25, legend_y),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 255, 255),
-                1,
+                0.8,
+                (0, 0, 0),
+                2,
                 lineType=cv2.LINE_AA
             )
-            legend_y += 25  # Move down for next legend entry
+            legend_y += 30  # Move down for next legend entry
 
         # Save the output image
         output_path = os.path.join(OUTPUT_DIR, f"{img_name}_overlay.png")
