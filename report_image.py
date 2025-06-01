@@ -4,6 +4,7 @@ import json
 import cv2
 import numpy as np
 import colorsys
+import textwrap
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -51,27 +52,27 @@ MODEL_CONFIGS = [
         gt_folder=f"dataset/{SPLIT}/labels",
         gt_format="yolo"
     ),
+    # ModelConfig(
+    #     model_name="YOLOv8m-max",
+    #     model_type="yolo",
+    #     pred_folder=f"Processed_Images/YOLO/yolov8m_sgd_lr0001_max/{SPLIT}/labels",
+    #     gt_folder=f"dataset/{SPLIT}/labels",
+    #     gt_format="yolo"
+    # ),
     ModelConfig(
-        model_name="YOLOv8m-max",
-        model_type="yolo",
-        pred_folder=f"Processed_Images/YOLO/yolov8m_sgd_lr0001_max/{SPLIT}/labels",
-        gt_folder=f"dataset/{SPLIT}/labels",
-        gt_format="yolo"
+        model_name="Faster-RCNN-resnet50-lr0.005",
+        model_type="faster_rcnn",
+        pred_folder=f"Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.005/{SPLIT}",
+        gt_folder=f"dataset/{SPLIT}/annotations",
+        gt_format="pascal_voc"
     ),
-    # ModelConfig(
-    #     model_name="Faster-RCNN-resnet50-lr0.005",
-    #     model_type="faster_rcnn",
-    #     pred_folder=f"Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.005/{SPLIT}",
-    #     gt_folder=f"dataset/{SPLIT}/annotations",
-    #     gt_format="pascal_voc"
-    # ),
-    # ModelConfig(
-    #     model_name="Faster-RCNN-resnet50-lr0.001",
-    #     model_type="faster_rcnn",
-    #     pred_folder=f"Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.001/{SPLIT}",
-    #     gt_folder=f"dataset/{SPLIT}/annotations",
-    #     gt_format="pascal_voc"
-    # ),
+    ModelConfig(
+        model_name="Faster-RCNN-resnet50-lr0.001",
+        model_type="faster_rcnn",
+        pred_folder=f"Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.001/{SPLIT}",
+        gt_folder=f"dataset/{SPLIT}/annotations",
+        gt_format="pascal_voc"
+    ),
     # ModelConfig(
     #     model_name="Faster-RCNN-resnet50-lr0.0001",
     #     model_type="faster_rcnn",
@@ -214,7 +215,6 @@ def load_yolo_predictions(folder: str, image_dir: str) -> Dict[str, List[Tuple[L
                 detections.append((bbox, confidence))
 
         pred_data[image_name] = sorted(detections, key=lambda x: -x[1])
-    # Debug: print how many YOLO preds loaded
     print(f"Loaded YOLO predictions from {folder}: {len(pred_data)} images with detections.")
     return pred_data
 
@@ -366,14 +366,13 @@ def main():
         # Create an overlay copy
         overlay = image.copy()
 
-        # Draw each model's predictions
+        # Draw predictions (same as before)...
         for idx, cfg in enumerate(MODEL_CONFIGS):
             colour = colours[idx]
             preds = model_predictions.get(cfg.model_name, {})
 
             if cfg.model_type in ["yolo", "faster_rcnn"]:
                 detections = preds.get(img_name, [])
-                # Debug: print if there are no detections
                 if cfg.model_type == "yolo" and not detections:
                     print(f"[DEBUG] No YOLO detections for {cfg.model_name} on {img_name}")
                 for (bbox, score) in detections:
@@ -402,37 +401,74 @@ def main():
                 # Create coloured mask
                 coloured_mask = np.zeros_like(image, dtype=np.uint8)
                 coloured_mask[mask == 1] = colour
-                # Overlay mask with transparency
-                alpha = 0.4
-                overlay = cv2.addWeighted(overlay, 1.0, coloured_mask, alpha, 0)
+                overlay = cv2.addWeighted(overlay, 1.0, coloured_mask, 0.4, 0)
 
-        # Blend overlay with original image for final view
         blended = cv2.addWeighted(image, 0.6, overlay, 0.4, 0)
 
-        # Draw legend (model colour mapping) at the top-left
-        legend_x, legend_y = 10, 30
-        for idx, cfg in enumerate(MODEL_CONFIGS):
+        # -------------------------
+        # LEGEND WITH WHITE BACKGROUND
+        # -------------------------
+        # Prepare wrapped text lines and measure dimensions
+        wrapped_entries = []
+        max_text_width = 0
+        line_height = 0
+        padding = 5
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.8
+        thickness = 2
+
+        for cfg in MODEL_CONFIGS:
+            # Wrap each model_name into multiple lines if too long
+            lines = textwrap.wrap(cfg.model_name, width=15)
+            wrapped_entries.append(lines)
+            for line in lines:
+                (text_width, text_height), _ = cv2.getTextSize(line, font, font_scale, thickness)
+                max_text_width = max(max_text_width, text_width)
+                line_height = max(line_height, text_height)
+
+        # Compute legend box size
+        total_lines = sum(len(lines) for lines in wrapped_entries)
+        box_width = 20 + 5 + max_text_width + 2 * padding  # color box + space + text + padding
+        box_height = total_lines * (line_height + 5) + 2 * padding
+
+        # Draw white rectangle as legend background
+        legend_x, legend_y = 10, 10
+        cv2.rectangle(
+            blended,
+            (legend_x, legend_y),
+            (legend_x + box_width, legend_y + box_height),
+            (255, 255, 255),
+            -1
+        )
+
+        # Draw each entry within the white box
+        current_y = legend_y + padding + line_height
+        for idx, lines in enumerate(wrapped_entries):
             colour = colours[idx]
-            # Draw small filled rectangle (20×20)
+            # Draw colored square for this model (20×20)
             cv2.rectangle(
                 blended,
-                (legend_x, legend_y - 15),
-                (legend_x + 20, legend_y + 5),
+                (legend_x + padding, current_y - line_height),
+                (legend_x + padding + 20, current_y - line_height + 20),
                 colour,
                 -1
             )
-            # Put model name next to rectangle (font scale=0.8, colour=black, thickness=2)
-            cv2.putText(
-                blended,
-                cfg.model_name,
-                (legend_x + 25, legend_y),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (0, 0, 0),
-                2,
-                lineType=cv2.LINE_AA
-            )
-            legend_y += 30  # Move down for next legend entry
+            # Draw each wrapped line
+            text_x = legend_x + padding + 20 + 5
+            for line in lines:
+                cv2.putText(
+                    blended,
+                    line,
+                    (text_x, current_y),
+                    font,
+                    font_scale,
+                    (0, 0, 0),
+                    thickness,
+                    lineType=cv2.LINE_AA
+                )
+                current_y += line_height + 5
+            # Add extra spacing between entries
+            current_y += 5
 
         # Save the output image
         output_path = os.path.join(OUTPUT_DIR, f"{img_name}_overlay.png")
