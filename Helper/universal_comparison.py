@@ -17,7 +17,7 @@ from pycocotools.cocoeval import COCOeval
 # -------------------------
 # CONFIGURATION
 # -------------------------
-SPLIT = "test" # change if needed
+SPLIT = "val" # change if needed
 
 class ModelConfig:
     """Configuration for different model types"""
@@ -45,7 +45,6 @@ MODEL_CONFIGS = [
         gt_folder=f"dataset/{SPLIT}/labels",
         gt_format="yolo"
     ),
-    
     
     ModelConfig(
         model_name="YOLOv8m",
@@ -667,11 +666,11 @@ def save_results(all_results: List[Dict]):
     
     # Save summary CSV
     summary_columns = ['Model', 'Type', 'Precision', 'Recall', 'F1', 'mAP@0.5', 'mAP@0.5:0.95']
-    summary_csv = os.path.join(OUTPUT_DIR, f'model_comparison_summary_{timestamp}.csv')
+    summary_csv = os.path.join(OUTPUT_DIR, f'model_comparison_summary_{timestamp}_{SPLIT}.csv')
     df[summary_columns].to_csv(summary_csv, index=False)
     
     # Save JSON for programmatic access
-    json_file = os.path.join(OUTPUT_DIR, f'results_{timestamp}.json')
+    json_file = os.path.join(OUTPUT_DIR, f'results_{timestamp}_{SPLIT}.json')
     with open(json_file, 'w') as f:
         json.dump(all_results, f, indent=2)
     

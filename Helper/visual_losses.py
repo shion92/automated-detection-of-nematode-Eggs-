@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 LR_LIST = ["lr_0.01", "lr_0.001", "lr_0.0001", "lr_0.005", "lr_0.0005"]
 
 MODEL = "faster_rcnn"  # deeplab
-EVAL_DIR = f"evaluation/{MODEL}"
+EVAL_DIR = f"evaluation/{MODEL}/resnet34"
 
 # -------------------------
 # 1) Plot train loss curves for each LR
@@ -30,7 +30,7 @@ for lr_id in LR_LIST:
     plt.plot(epochs, train_loss, label=f"Train {lr_id}", linestyle="-")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.title("Training Loss Curves (DeepLab)")
+plt.title(f"Training Loss Curves ({MODEL})")
 plt.legend()
 plt.tight_layout()
 plt.show()
@@ -51,7 +51,7 @@ for lr_id in LR_LIST:
     plt.plot(epochs, val_loss, label=f"Val {lr_id}", linestyle="--")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
-plt.title("Validation Loss Curves (DeepLab)")
+plt.title(f"Validation Loss Curves ({MODEL})")
 plt.legend()
 plt.tight_layout()
 plt.show()
