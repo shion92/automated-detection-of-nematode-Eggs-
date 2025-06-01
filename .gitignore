@@ -83,3 +83,5 @@ faster_rcnn/faster_rcnn_with_cv.py
 /Evaluation/tensorboard_logs
 /Evaluation/tensorboard_logs
 /Evaluation/overlays
+report_image.py
+report_image.py
