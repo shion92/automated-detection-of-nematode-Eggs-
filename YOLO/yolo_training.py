@@ -7,19 +7,19 @@ import logging
 from ultralytics import YOLO
 
 # -------------------------
-# Configuration
+# Configuration 
 # -------------------------
 CONFIGS = [
-    # # Default with mosaic
+    #  === Default with mosaic  ===
     # {"name": "yolov8s_default"},
 
-    # # No mosaic
+    #  === No mosaic  ===
     # {"name": "yolov8s_default_xmosaic", "mosaic": 0},
 
-    # No mosaic + cutout + flips https://docs.ultralytics.com/guides/yolo-data-augmentation/#auto-augment-auto_augment
+    #   === No mosaic + cutout + flips ===
     # {"name": "yolov8s_default_xmosaic_cutout", "mosaic": 0, "erasing": 0.6, "fliplr": 1.0, "flipud": 0.5},
 
-    # # SGD variants
+    #  === SGD variants  ===
     # {"name": "yolov8s_sgd_lr001", "optimizer": "SGD", "lr0": 0.01},
     # {"name": "yolov8s_sgd_lr0005", "optimizer": "SGD", "lr0": 0.005},
     # {"name": "yolov8s_sgd_lr0001", "optimizer": "SGD", "lr0": 0.001},  # best 
@@ -29,15 +29,13 @@ CONFIGS = [
     # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_4", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5}, # best 
     # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_degree_90", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, 
     
-     # SGD variants - strong mix 
-    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50}, 
-    # {"name": "yolov8s_sgd_lr0001_xmosaic_cutmix_eras", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5,  "epochs": 300, "patience": 50},  
-    # {"name": "yolov8s_sgd_lr0001_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},   
-    # {"name": "yolov8s_adam_lr0001_xmosaic", "optimizer": "Adam", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, 
+    #  === SGD variants - strong augmentation  === https://docs.ultralytics.com/guides/yolo-data-augmentation/#auto-augment-auto_augment 
+    {"name": "yolov8s_adam_lr0001_xmosaic", "optimizer": "Adam", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, 
+    {"name": "yolov8s_sgd_lr0001_xmosaic_cutout_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50}, 
+    {"name": "yolov8s_sgd_lr0001_max", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},   
     
     
-    
-    # # Adam variants
+    # === Adam variants ===
     # {"name": "yolov8s_adam_lr001", "optimizer": "Adam", "lr0": 0.01, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 0},
     # {"name": "yolov8s_adam_lr0005", "optimizer": "Adam", "lr0": 0.005, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 0},
     # {"name": "yolov8s_adam_lr0001", "optimizer": "Adam", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 0}, # best 
@@ -46,18 +44,17 @@ CONFIGS = [
     # {"name": "yolov8s_adam_lr00052", "optimizer": "Adam", "lr0": 0.005, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 90},
     # {"name": "yolov8s_adam_lr00012", "optimizer": "Adam", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "degrees": 90}, # best
 
-    # # AdamW variants
+    # === AdamW variants ===
     # {"name": "yolov8s_adamw_lr001", "optimizer": "AdamW", "lr0": 0.01, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5},
     # {"name": "yolov8s_adamw_lr0005", "optimizer": "AdamW", "lr0": 0.005, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5},
     # {"name": "yolov8s_adamw_lr0001", "optimizer": "AdamW", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5}, # best
     
-    
-     # === YOLOv8m (larger object detection model) ===
-    # {"name": "yolov8m_sgd_lr0001", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
-    # {"name": "yolov8m_sgd_lr0001_max", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
+    #  === YOLOv8m (larger object detection model) ===
+    {"name": "yolov8m_sgd_lr0001", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
+    {"name": "yolov8m_sgd_lr0001_max", "model": "yolov8m.pt", "optimizer": "SGD", "lr0": 0.001, "mosaic": 1, "erasing": 0.8, "fliplr": 1.0, "flipud": 0.5, "epochs": 300, "patience": 50},
     
     # === YOLOv8-seg for instance segmentation ===
-    # {"name": "yolov8s_seg_lr0001", "model": "yolov8s-seg.pt", "data": "data_seg.yaml", "task": "segment", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.0, "fliplr": 1.0, "flipud": 0.5, "epochs": 200, "patience": 30},
+    {"name": "yolov8s_seg_lr0001", "model": "yolov8s-seg.pt", "data": "data_seg.yaml", "task": "segment", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.0, "fliplr": 1.0, "flipud": 0.5, "epochs": 200, "patience": 30},
     {"name": "yolov8s_seg_lr0001_eras", "model": "yolov8s-seg.pt", "data": "data_seg.yaml", "task": "segment", "optimizer": "SGD", "lr0": 0.001, "mosaic": 0, "erasing": 0.5, "fliplr": 1.0, "flipud": 0.5, "epochs": 200, "patience": 30}
     
     
@@ -67,7 +64,7 @@ COMMON_ARGS = {
     "model": "yolov8s.pt",
     "data": "data.yaml",
     "task": "detect",
-    "epochs": 2,
+    "epochs": 200,
     "imgsz": 608,
     "batch": 16,
     "patience": 30,
@@ -103,6 +100,7 @@ def evaluate_model(weight_path: str, config_name: str,  task: str):
         task=task,
         project=f"Processed_Images/YOLO/{config_name}",
         name="val",
+        exist_ok=True, 
         save_json=True,
         verbose=True,
         save_txt=True
@@ -111,13 +109,14 @@ def evaluate_model(weight_path: str, config_name: str,  task: str):
 # -------------------------
 # Prediction Function
 # -------------------------
-def predict_model(weight_path: str, config_name: str, task: str):
+def predict_model(weight_path: str, config_name: str, task: str, name = "test"):
     model = YOLO(weight_path)
     model.predict(
         source="dataset/test/images",
         task=task,
         project=f"Processed_Images/YOLO/{config_name}",
-        name="test",
+        name = name,
+        exist_ok=True, 
         save_json=True,
         save_txt=True,
         save_conf=True,
@@ -157,7 +156,7 @@ if __name__ == "__main__":
         evaluate_model(weight_path, config_name, task)
 
         logging.info(f"Predicting test images for: {config_name}")
-        predict_model(weight_path, config_name, task)
+        predict_model(weight_path, config_name, task, "test")
 
     total_time = time.time() - start
     logging.info(f"\n✅ All runs complete in {total_time:.1f} seconds")

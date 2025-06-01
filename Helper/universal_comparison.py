@@ -36,17 +36,73 @@ MODEL_CONFIGS = [
         gt_folder="dataset/test/labels",
         gt_format="yolo"
     ),
-    # ModelConfig(
-    #     model_name="YOLOv8s-seg",
-    #     model_type="yolo_seg", 
-    #     pred_folder="Processed_Images/YOLO/nematode_yolov8s_seg/test/labels",
-    #     gt_folder="dataset/test/labels",
-    #     gt_format="yolo"
-    # ),
     ModelConfig(
-        model_name="Faster-RCNN",
+        model_name="YOLOv8s-max",
+        model_type="yolo",
+        pred_folder="Processed_Images/YOLO/yolov8s_sgd_lr0001_max/test/labels",
+        gt_folder="dataset/test/labels",
+        gt_format="yolo"
+    ),
+    ModelConfig(
+        model_name="YOLOv8s-seg",
+        model_type="yolo_seg", 
+        pred_folder="Processed_Images/YOLO/yolov8s_seg/test/labels",
+        gt_folder="dataset/test/labels",
+        gt_format="yolo"
+    ),
+    
+    ModelConfig(
+        model_name="YOLOv8s-seg-max",
+        model_type="yolo_seg", 
+        pred_folder="Processed_Images/YOLO/yolov8s_seg_eras/test/labels",
+        gt_folder="dataset/test/labels",
+        gt_format="yolo"
+    ),
+    
+    ModelConfig(
+        model_name="Faster-RCNN-resnet50-lr0.005",
         model_type="faster_rcnn",
         pred_folder="Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.005/test",
+        gt_folder="dataset/test/annotations",
+        gt_format="pascal_voc"
+    ),
+    
+    ModelConfig(
+        model_name="Faster-RCNN-resnet50-lr0.001",
+        model_type="faster_rcnn",
+        pred_folder="Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.001/test",
+        gt_folder="dataset/test/annotations",
+        gt_format="pascal_voc"
+    ),
+    
+    ModelConfig(
+        model_name="Faster-RCNN-resnet50-lr0.0001",
+        model_type="faster_rcnn",
+        pred_folder="Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.0001/test",
+        gt_folder="dataset/test/annotations",
+        gt_format="pascal_voc"
+    ),
+    
+    ModelConfig(
+        model_name="Faster-RCNN-resnet34-lr0.005",
+        model_type="faster_rcnn",
+        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.005/test",
+        gt_folder="dataset/test/annotations",
+        gt_format="pascal_voc"
+    ),
+    
+    ModelConfig(
+        model_name="Faster-RCNN-resnet34-lr0.001",
+        model_type="faster_rcnn",
+        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.001/test",
+        gt_folder="dataset/test/annotations",
+        gt_format="pascal_voc"
+    ),
+    
+    ModelConfig(
+        model_name="Faster-RCNN-resnet34-lr0.0001",
+        model_type="faster_rcnn",
+        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.0001/test",
         gt_folder="dataset/test/annotations",
         gt_format="pascal_voc"
     )
@@ -110,7 +166,7 @@ def load_yolo_ground_truth(folder: str) -> Dict[str, List[List[float]]]:
 
 def load_pascal_voc_ground_truth(folder: str) -> Dict[str, List[List[float]]]:
     """Load Pascal VOC XML format ground truth"""
-    print(f"📖 Loading Pascal VOC ground truth from: {folder}")
+    print(f"Loading Pascal VOC ground truth from: {folder}")
     gt_data = {}
     
     for xml_file in glob.glob(os.path.join(folder, '*.xml')):

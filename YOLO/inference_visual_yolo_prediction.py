@@ -5,13 +5,13 @@ import os
 import json
 import cv2
 from tqdm import tqdm
-from yolov8s import predict_model  
+from yolo_training import predict_model, evaluate_model
 
 # -------------------------
 # Configuration
 # -------------------------
-SPLIT = "test"
-MODEL_NAME = "yolov8s_sgd_lr0001"  # change as needed
+SPLIT = "val"  # change as needed
+MODEL_NAME = "yolov8s_seg_lr0001"  # change as needed
 MODEL_PATH = os.path.join("model", "YOLO", MODEL_NAME, "weights", "best.pt")
 IMAGE_DIR = f"dataset/{SPLIT}/images"
 LABEL_DIR = f"Processed_Images/YOLO/{MODEL_NAME}/{SPLIT}/labels"
@@ -19,12 +19,8 @@ ANNOTATION_DIR = f"dataset/{SPLIT}/labels"  # Ground truth annotations
 OUTPUT_IMG_DIR = os.path.join(os.path.dirname(LABEL_DIR), "images")
 CONFIDENCE_THRESHOLD = 0.5
 IMAGE_SIZE = (608, 608)  # used for scaling YOLO format to pixel coordinates
-
-# -------------------------
-# Directory Setup
-# -------------------------
 os.makedirs(OUTPUT_IMG_DIR, exist_ok=True)
-
+task = "segment" if "_seg" in MODEL_NAME else "detect" 
 # -------------------------
 # Step 0: Run prediction if missing
 # -------------------------
@@ -39,36 +35,40 @@ def prediction_needed(image_dir, label_dir):
 
 if prediction_needed(IMAGE_DIR, LABEL_DIR):
     print(f"Warning: Prediction results missing. Running prediction with model: {MODEL_NAME}")
-    task = "segment" if "_seg" in MODEL_NAME else "detect"
-    predict_model(weight_path= MODEL_PATH, config_name=MODEL_NAME, task = task)
+    predict_model(weight_path= MODEL_PATH, config_name=MODEL_NAME, task = task, name = SPLIT)
     print("Prediction complete.")
 
 # -------------------------
 # Helper Function
 # -------------------------
-def parse_yolo_line(line, img_width, img_height):
+def parse_yolo_line(line, img_width, img_height, task):
     """Parse a YOLO format line and return bounding box coordinates"""
     parts = line.strip().split()
-    if len(parts) < 5:
+    if len(parts) < 6:
         return None
     
     class_id = int(float(parts[0]))
-    cx, cy, w, h = map(float, parts[1:5])
+    confidence = float(parts[-1])
+    coords = list(map(float, parts[1:-1]))
+    # cx, cy, w, h = map(float, parts[1:5])
     
     # Convert YOLO format to (x1, y1, x2, y2)
-    cx, cy, w, h = cx * img_width, cy * img_height, w * img_width, h * img_height
-    x1 = int(cx - w / 2)
-    y1 = int(cy - h / 2)
-    x2 = int(cx + w / 2)
-    y2 = int(cy + h / 2)
-    
-    confidence = float(parts[5]) if len(parts) > 5 else 1.0
-    
-    return {
-        'class_id': class_id,
-        'bbox': [x1, y1, x2, y2],
-        'confidence': confidence
-    }
+    if task == "detect" and len(coords) == 4:
+        cx, cy, w, h = coords
+        cx, cy, w, h = cx * img_width, cy * img_height, w * img_width, h * img_height
+        x1 = int(cx - w / 2)
+        y1 = int(cy - h / 2)
+        x2 = int(cx + w / 2)
+        y2 = int(cy + h / 2)
+        return {"class_id": class_id, "bbox": [x1, y1, x2, y2], "confidence": confidence, "format": "bbox"}
+
+    elif task == "segment" and len(coords) >= 6 and len(coords) % 2 == 0:
+        points = []
+        for i in range(0, len(coords), 2):
+            x = int(coords[i] * img_width)
+            y = int(coords[i + 1] * img_height)
+            points.append([x, y])
+        return {"class_id": class_id, "points": points, "confidence": confidence, "format": "mask"}
 
 # -------------------------
 # Draw Predictions and Annotations
@@ -92,14 +92,11 @@ for image_name in tqdm(os.listdir(IMAGE_DIR), desc="Rendering predictions and an
     
     height, width = image.shape[:2]
     
-    pred_boxes = []
-    pred_scores = []
-    
     # Draw ground truth annotations in BLUE
     if os.path.exists(annotation_path):
         with open(annotation_path, "r") as f:
             for line in f:
-                annotation = parse_yolo_line(line, width, height)
+                annotation = parse_yolo_line(line, width, height, task="detect"))
                 if annotation is None:
                     print(f"Warning: Annotation not found for {image_name}")
                     continue
@@ -115,6 +112,8 @@ for image_name in tqdm(os.listdir(IMAGE_DIR), desc="Rendering predictions and an
     
     # Draw predictions in GREEN
     if os.path.exists(label_path):
+        print("Expected label path:", label_path)
+        print("File exists?", os.path.exists(label_path))
         with open(label_path, "r") as f:
             for line in f:
                 pred = parse_yolo_line(line, width, height)

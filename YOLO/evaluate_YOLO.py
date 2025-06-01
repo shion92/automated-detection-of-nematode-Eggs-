@@ -7,8 +7,9 @@ from typing import Dict, List, Tuple, Optional
 # Configuration
 # -------------------------
 MODEL_NAME = 'yolov8s_sgd_lr0001' # change this 
-PRED_FOLDER = os.path.join('Processed_Images', 'YOLO', MODEL_NAME, 'test', 'labels')
-GT_FOLDER = os.path.join('dataset', 'test', 'labels') # for yolov8s_seg this will have to change to dataset_seg
+SPLIT = 'val'
+GT_FOLDER = os.path.join('dataset', 'test', 'labels') # for yolov8s_segmentation this will have to change to dataset_seg
+PRED_FOLDER = os.path.join('Processed_Images', 'YOLO', MODEL_NAME, SPLIT, 'labels')
 OUTPUT_DIR = os.path.join('evaluation', 'YOLO', MODEL_NAME)
 TARGET_CLASS = 0
 IOU_THRESHOLDS = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]
@@ -264,7 +265,7 @@ def print_results(results: Dict) -> None:
     print(f"{'Recall:':<15}{results['recall']:<10.4f}")
     print(f"{'F1-Score:':<15}{results['f1']:<10.4f}")
     
-    print(f"\n📈 Average Precision Metrics:")
+    print(f"Average Precision Metrics:")
     print("-" * 35)
     print(f"{'Metric':<15}{'Value':<10}")
     print("-" * 35)

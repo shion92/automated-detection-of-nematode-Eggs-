@@ -8,7 +8,6 @@ from sklearn.metrics import precision_recall_curve, auc
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from tqdm import tqdm
-import hashlib
 
 # -------------------------
 # this script evaluate the predictions of Faster R-CNN/YOLO for the following:
@@ -26,9 +25,8 @@ import hashlib
 # -------------------------
 SPLIT = "val" # change as needed
 IMAGE_DIR = f"dataset/{SPLIT}/images"
-backbone_name = "resnet34"  # "resnet50"  # or "resnet34"
-lr = 0.01  # change as needed
-PRED_DIR = VIS_DIR = f"Processed_Images/faster_rcnn_{backbone_name}/Predictions/lr_{lr}/{SPLIT}"
+backbone_name = "resnet50"  # "resnet50"  # or "resnet34"
+lr = None  # Adjust the learning rate (e.g., to 0.01) as needed. Otherwise, the script will process all lr_{lr} files in the PRED_DIR directory.
 ANN_DIR = f"dataset/{SPLIT}/annotations"
 IOU_THRESH = 0.5 # change as needed
 
@@ -288,70 +286,85 @@ def draw_boxes(image_path, pred_boxes, pred_scores, gt_boxes):
 # 7b) Run Evaluation
 # -------------------------
 if __name__ == "__main__":
-    # 7.1 Load data
-    gt    = load_ground_truth(ANN_DIR)
-    preds = load_predictions(PRED_DIR)
-
-    # 7.2 Evaluate at conf=0.5
-    P, R, F1, scores, labels = evaluate_threshold(gt, preds, IOU_THRESH, 0.5)
-    print(f"Fixed-threshold (0.5) → Precision: {P:.3f}, Recall: {R:.3f}, F1: {F1:.3f}")
-
-    # 7.3 PR curve + AUC-PR
-    precs, recs, threshs, aucpr = compute_pr_curve(scores, labels)
-    print(f"AUC-PR: {aucpr:.3f}")
+    root_pred_dir = f"Processed_Images/faster_rcnn_{backbone_name}/Predictions"
     
-    pr_path   = os.path.join(VIS_DIR, "pr_data.json")
-    # 7.3.1 Write out raw PR data for plotting
-    pr_data = {
-        "scores": scores.tolist(),
-        "labels": labels.tolist(),
-        "auc_pr": float(aucpr),
-        "precisions": precs.tolist(),
-        "recalls": recs.tolist(),
-        "thresholds": threshs.tolist(),
-        "precision": float(P),
-        "recall": float(R),
-        "f1": float(F1),
-        "iou_thresh": IOU_THRESH,
-        "conf_thresh": 0.5,
-    }
-    with open(pr_path, "w") as f:
-        json.dump(pr_data, f, indent=2)
-    print("✅ Saved PR data to pr_data.json")
-
-    # 7.4 Write COCO files & compute mAP
-    gt_path   = os.path.join(VIS_DIR, "gt_coco.json")
-    pred_path = os.path.join(VIS_DIR, "preds_coco.json")
-    coco_path = os.path.join(VIS_DIR, "coco_metrics.json")
+    lr_dirs = sorted([d for d in os.listdir(root_pred_dir) if d.startswith("lr_")])
     
-    img_id_map = write_coco_gt(gt, gt_path)
-    write_coco_preds(preds, pred_path, img_id_map)
-    compute_coco_map(gt_path, pred_path, out_json = coco_path)
-    
-    print(f"✅ Saved GT to {gt_path}")
-    print(f"✅ Saved predictions to {pred_path}")   
-    
-# -------------------------
-#  Main Visualisation Loop
-# -------------------------
-    image_files = [f for f in os.listdir(IMAGE_DIR) if f.endswith('.tif')]
+    for lr_dir in lr_dirs:
+        if lr:
+            lr_value = lr
+        else:
+            lr_value = lr_dir.replace("lr_", "") 
+            
+        print(f"\n=== Evaluating {lr_dir} ({SPLIT} set) ===")
 
-    for img_name in image_files:
-        img_path = os.path.join(IMAGE_DIR, img_name)
-        json_path = os.path.join(PRED_DIR, img_name.replace(".tif", ".json"))
+        PRED_DIR = os.path.join(root_pred_dir, lr_dir, SPLIT)
+        VIS_DIR = PRED_DIR  # save visualisations in the same folder
 
-        if not os.path.exists(json_path):
-            print(f"Warning Skipping {img_name}: no prediction found.")
-            continue
+        # 7.1 Load data
+        gt    = load_ground_truth(ANN_DIR)
+        preds = load_predictions(PRED_DIR)
 
-        with open(json_path, 'r') as f:
-            pred_data = json.load(f)
-        pred_boxes = pred_data.get("boxes", [])
-        pred_scores = pred_data.get("scores", [0.0] * len(pred_boxes))  # fallback if scores not saved
+        # 7.2 Evaluate at conf=0.5
+        P, R, F1, scores, labels = evaluate_threshold(gt, preds, IOU_THRESH, 0.5)
+        print(f"Fixed-threshold (0.5) → Precision: {P:.3f}, Recall: {R:.3f}, F1: {F1:.3f}")
 
-        gt_boxes = gt.get(img_name, np.empty((0,4))).tolist()
+        # 7.3 PR curve + AUC-PR
+        precs, recs, threshs, aucpr = compute_pr_curve(scores, labels)
+        print(f"AUC-PR: {aucpr:.3f}")
 
-        visual_img = draw_boxes(img_path, pred_boxes, pred_scores, gt_boxes)
-        save_path = os.path.join(VIS_DIR, img_name.replace(".tif", ".jpg"))
-        cv2.imwrite(save_path, visual_img)
-        print(f"✅ Saved with IoU & confidence: {save_path}")
+        pr_path   = os.path.join(VIS_DIR, "pr_data.json")
+        # 7.3.1 Write out raw PR data for plotting
+        pr_data = {
+            "scores": scores.tolist(),
+            "labels": labels.tolist(),
+            "auc_pr": float(aucpr),
+            "precisions": precs.tolist(),
+            "recalls": recs.tolist(),
+            "thresholds": threshs.tolist(),
+            "precision": float(P),
+            "recall": float(R),
+            "f1": float(F1),
+            "iou_thresh": IOU_THRESH,
+            "conf_thresh": 0.5,
+        }
+        with open(pr_path, "w") as f:
+            json.dump(pr_data, f, indent=2)
+        print("✅ Saved PR data to pr_data.json")
+
+        # 7.4 Write COCO files & compute mAP
+        gt_path   = os.path.join(VIS_DIR, "gt_coco.json")
+        pred_path = os.path.join(VIS_DIR, "preds_coco.json")
+        coco_path = os.path.join(VIS_DIR, "coco_metrics.json")
+
+        img_id_map = write_coco_gt(gt, gt_path)
+        write_coco_preds(preds, pred_path, img_id_map)
+        compute_coco_map(gt_path, pred_path, out_json = coco_path)
+
+        print(f"✅ Saved GT to {gt_path}")
+        print(f"✅ Saved predictions to {pred_path}")   
+
+        # -------------------------
+        #  Main Visualisation Loop
+        # -------------------------
+        image_files = [f for f in os.listdir(IMAGE_DIR) if f.endswith('.tif')]
+
+        for img_name in image_files:
+            img_path = os.path.join(IMAGE_DIR, img_name)
+            json_path = os.path.join(PRED_DIR, img_name.replace(".tif", ".json"))
+
+            if not os.path.exists(json_path):
+                print(f"Warning Skipping {img_name}: no prediction found.")
+                continue
+
+            with open(json_path, 'r') as f:
+                pred_data = json.load(f)
+            pred_boxes = pred_data.get("boxes", [])
+            pred_scores = pred_data.get("scores", [0.0] * len(pred_boxes))  # fallback if scores not saved
+
+            gt_boxes = gt.get(img_name, np.empty((0,4))).tolist()
+
+            visual_img = draw_boxes(img_path, pred_boxes, pred_scores, gt_boxes)
+            save_path = os.path.join(VIS_DIR, img_name.replace(".tif", ".jpg"))
+            cv2.imwrite(save_path, visual_img)
+            print(f"✅ Saved with IoU & confidence: {save_path}")
