@@ -22,14 +22,18 @@ from tqdm import tqdm
 # -------------------------
 # Configuration
 # -------------------------
+lr_list = [
+    0.01, 
+    0.001, 
+    0.0001, 
+    0.0005, 
+    0.0008
+    ]
+
 SPLIT = "test"
 IMAGE_DIR = f"dataset/{SPLIT}/images"
-PRED_DIR = f"Processed_Images/deeplab/Predictions/{SPLIT}"
-VIS_DIR = f"Processed_Images/deeplab/Predictions/{SPLIT}"
-EVAL_DIR = f"evaluation/deeplab/{SPLIT}"
-os.makedirs(EVAL_DIR, exist_ok=True)
 GT_MASK_DIR  = f"dataset/{SPLIT}/masks"
-THRESH = 0.7   # binarisation threshold for predicted masks
+THRESH = 0.5   # binarisation threshold for predicted masks
 
 # -------------------------
 # IoU Helper 
@@ -159,44 +163,53 @@ def draw_overlay(image_path, gt_mask, pred_mask):
 # 7) Run Evaluation
 # -------------------------
 if __name__ == "__main__":
-    # 7.1 Load data
-    gt = load_ground_truth(GT_MASK_DIR)
-    preds = load_predictions(PRED_DIR)
+    for lr in lr_list:
+        print(f"\nEvaluating DeepLab model with lr={lr} on {SPLIT} set")
+        
+        pred_dir = f"Processed_Images/deeplab/Predictions/lr_{lr}/{SPLIT}"
+        vis_dir = pred_dir  # Visuals go alongside predictions
+        eval_dir = f"evaluation/deeplab/lr_{lr}/{SPLIT}"
+        os.makedirs(eval_dir, exist_ok=True)
+        
+        # 7.1 Load data
+        gt = load_ground_truth(GT_MASK_DIR)
+        preds = load_predictions(pred_dir)
 
-    # 7.2 Evaluate at fixed threshold
-    PA, mAcc, P, R, F1, IoU_bg, IoU_egg, mIoU, scores, labels = evaluate_threshold(gt, preds, THRESH)
-    print(f"Fixed-threshold ({THRESH}) → Precision: {P:.3f}, Recall: {R:.3f}, F1: {F1:.3f}")
-    print(f"Pixel Accuracy: {PA:.3f}, Mean Accuracy: {mAcc:.3f}")
-    print(f"IoU Background: {IoU_bg:.3f}, IoU Egg: {IoU_egg:.3f}, Mean IoU: {mIoU:.3f}")
+        # 7.2 Evaluate at fixed threshold
+        PA, mAcc, P, R, F1, IoU_bg, IoU_egg, mIoU, scores, labels = evaluate_threshold(gt, preds, THRESH)
+        print(f"[lr={lr}] Fixed-threshold ({THRESH}) → Precision: {P:.3f}, Recall: {R:.3f}, F1: {F1:.3f}")
+        print(f"[lr={lr}] Pixel Accuracy: {PA:.3f}, Mean Accuracy: {mAcc:.3f}")
+        print(f"[lr={lr}] IoU Background: {IoU_bg:.3f}, IoU Egg: {IoU_egg:.3f}, Mean IoU: {mIoU:.3f}")
 
-    # 7.3 PR curve + AUC-PR
-    precs, recs, threshs, aucpr = compute_pr_curve(scores, labels)
-    print(f"AUC-PR: {aucpr:.3f}")
-    pr_path = os.path.join(EVAL_DIR, "pr_data.json")
-    with open(pr_path, "w") as f:
-        json.dump({
-            "auc_pr": float(aucpr),
-            "precisions": precs.tolist(),
-            "recalls": recs.tolist(),
-            "thresholds": threshs.tolist(),
-            "fixed_threshold": THRESH,
-            "precision": float(P),
-            "recall": float(R),
-            "f1": float(F1),
-        }, f, indent=2)
-    print(f"✅ Saved PR data to pr_data.json")
 
-# -------------------------
-#  Main Visualisation Loop
-# -------------------------
-    for name, gt_mask in tqdm(gt.items(), desc="Visualising"):
-        img_path = os.path.join(IMAGE_DIR, name + ".tif")
-        pm = preds.get(name, np.zeros_like(gt_mask))
-        pm_bin = (pm > THRESH).astype(np.uint8)
+        # 7.3 PR curve + AUC-PR
+        precs, recs, threshs, aucpr = compute_pr_curve(scores, labels)
+        print(f"[lr={lr}] AUC-PR: {aucpr:.3f}")
+        pr_path = os.path.join(eval_dir, "pr_data.json")
+        with open(pr_path, "w") as f:
+            json.dump({
+                "auc_pr": float(aucpr),
+                "precisions": precs.tolist(),
+                "recalls": recs.tolist(),
+                "thresholds": threshs.tolist(),
+                "fixed_threshold": THRESH,
+                "precision": float(P),
+                "recall": float(R),
+                "f1": float(F1),
+            }, f, indent=2)
+        print(f"✅ Saved PR data to {pr_path}")
 
-        vis = draw_overlay(img_path, gt_mask, pm_bin)
-        output = os.path.join(VIS_DIR, name + ".jpg")
-        cv2.imwrite(output, vis)
-        print(f"✅ Saved overlay: {output}")
+    # -------------------------
+    #  Main Visualisation Loop
+    # -------------------------
+        for name, gt_mask in tqdm(gt.items(), desc=f"[lr={lr}] Visualising"):
+            img_path = os.path.join(IMAGE_DIR, name + ".tif")
+            pm = preds.get(name, np.zeros_like(gt_mask))
+            pm_bin = (pm > THRESH).astype(np.uint8)
 
-    print("\n✅ All evaluation and visualisations complete.")
+            vis = draw_overlay(img_path, gt_mask, pm_bin)
+            output = os.path.join(vis_dir, name + ".jpg")
+            cv2.imwrite(output, vis)
+            print(f"✅ Saved overlay: {output}")
+
+        print("\n✅ All evaluation and visualisations complete.")

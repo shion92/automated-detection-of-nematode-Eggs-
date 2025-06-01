@@ -19,16 +19,16 @@ import sys
 # -------------------------
 # Configuration
 # -------------------------
-DATA_DIR = "dataset/train"
-VAL_DIR = "dataset/val"
-MASK_DIR = os.path.join(DATA_DIR, "masks")
-VAL_MASK_DIR = os.path.join(VAL_DIR, "masks")
+lr_list = [
+    0.01, 
+    0.001, 
+    0.0001, 
+    0.0005, 
+    0.0008
+    ]
 PRED_OUTPUT_DIR = "Processed_Images/deeplab/Predictions"
-OUTPUT_FILE_EXTENSION = ".json"  # Configurable output file extension
-MODEL_OUT_DIR = os.path.join("model", "deeplab")
-BATCH_SIZE = 2
-NUM_EPOCHS = 200
-# lr_list = [0.0005, 0.0008, 0.0001]
+OUTPUT_FILE_EXTENSION = ".json"  
+BASE_MODEL_DIR = os.path.join("model", "deeplab")
 IMG_SIZE = 512
 DEVICE = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
@@ -92,10 +92,10 @@ def infer_collate(batch):
     return images, names
 
 def load_best_model(lr):
-    model_out_dir = os.path.join(MODEL_OUT_DIR, f"lr_{lr}")
-    model_path = f"{model_out_dir}/deeplabv3plus_lr_{lr}_best.pth"
+    model_out_dir = os.path.join(BASE_MODEL_DIR, f"lr_{lr}")
+    model_path = os.path.join(model_out_dir, f"deeplabv3plus_lr_{lr}_best.pth")
     model = smp.DeepLabV3Plus(
-        encoder_name="resnet34",
+        encoder_name="resnet50",
         encoder_weights="imagenet",
         in_channels=3,
         classes=1,
@@ -106,8 +106,7 @@ def load_best_model(lr):
     model.load_state_dict(state)
     model.to(DEVICE).eval()
     return model
-
-def predict_and_save(split="test"):
+def predict_and_save(model, lr, split="test"):
     img_dir = os.path.join("dataset", split, "images")
     loader = DataLoader(EggSegmentationDataset(img_dir, None, get_val_transform()),
                 batch_size=1,
@@ -115,24 +114,24 @@ def predict_and_save(split="test"):
                 num_workers=0,
                 pin_memory=True,
                 collate_fn=infer_collate
-            )
-    out_dir = os.path.join(PRED_OUTPUT_DIR, split)
-    os.makedirs(os.path.join(out_dir, split), exist_ok=True)
+                )
+    out_dir = os.path.join(PRED_OUTPUT_DIR, f"lr_{lr}", split)
+    os.makedirs(out_dir, exist_ok=True)
 
     model.eval()
     with torch.no_grad():
-            for image, names in tqdm(loader, desc=f"Inference on {split}"):
-                image = image.to(DEVICE)
-                output = model(image)
-                pred_mask = torch.sigmoid(output).squeeze(1)
-                for mask_arr, fname in zip(pred_mask.cpu().numpy(), names):
-                    raw_mask = mask_arr.astype(float) 
-                    out_path = os.path.join(
-                        out_dir,
-                        os.path.splitext(fname)[0] + OUTPUT_FILE_EXTENSION
-                    )
-                    with open(out_path, 'w') as f:
-                        json.dump({"mask": raw_mask.tolist()}, f, indent=2)
+        for image, names in tqdm(loader, desc=f"[{lr}] Inference on {split}"):
+            image = image.to(DEVICE)
+            output = model(image)
+            pred_mask = torch.sigmoid(output).squeeze(1)
+            for mask_arr, fname in zip(pred_mask.cpu().numpy(), names):
+                raw_mask = mask_arr.astype(float)
+                out_path = os.path.join(
+                    out_dir,
+                    os.path.splitext(fname)[0] + OUTPUT_FILE_EXTENSION
+                )
+                with open(out_path, 'w') as f:
+                    json.dump({"mask": raw_mask.tolist()}, f, indent=2)
 
 # -------------------------
 # Main
@@ -142,12 +141,12 @@ if __name__ == "__main__":
     # print("\n=== Starting training... ===")
     # train_model()
 
-    
-    model = load_best_model(lr= 0.0008)
-    print("\n=== Running predictions... ===")
-    for split in ["test", "val", "train"]:
-        print(f"\n Running inference on {split} set...")
-        predict_and_save(split=split)
+    for lr in lr_list:
+        print(f"\n=== Running predictions for learning rate {lr}... ===")
+        model = load_best_model(lr=lr)
+        for split in ["test", "val", "train"]:
+            print(f"\n Running inference on {split} set...")
+            predict_and_save(model, lr, split=split)
         
     print(f"\n✅ Done! Total runtime: {time.time() - start:.2f} seconds.")
 
