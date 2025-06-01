@@ -80,3 +80,5 @@ faster_rcnn/faster_rcnn_with_cv.py
 /YOLO/iteration_1
 /dataset_seg
 /YOLO/summary
+/Evaluation/tensorboard_logs
+/Evaluation/tensorboard_logs

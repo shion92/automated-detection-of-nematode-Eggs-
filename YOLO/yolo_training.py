@@ -109,10 +109,10 @@ def evaluate_model(weight_path: str, config_name: str,  task: str):
 # -------------------------
 # Prediction Function
 # -------------------------
-def predict_model(weight_path: str, config_name: str, task: str, name = "test"):
+def predict_model(weight_path: str, config_name: str, task: str, name):
     model = YOLO(weight_path)
     model.predict(
-        source="dataset/test/images",
+        source=f"dataset/{name}/images",
         task=task,
         project=f"Processed_Images/YOLO/{config_name}",
         name = name,
@@ -156,7 +156,7 @@ if __name__ == "__main__":
         evaluate_model(weight_path, config_name, task)
 
         logging.info(f"Predicting test images for: {config_name}")
-        predict_model(weight_path, config_name, task, "test")
+        predict_model(weight_path, config_name, task, name = "test")
 
     total_time = time.time() - start
     logging.info(f"\n✅ All runs complete in {total_time:.1f} seconds")

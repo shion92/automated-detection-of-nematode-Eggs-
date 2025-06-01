@@ -3,15 +3,16 @@
 # -------------------------
 import os
 import json
+import numpy as np
 import cv2
 from tqdm import tqdm
-from yolo_training import predict_model, evaluate_model
+from yolo_training import predict_model
 
 # -------------------------
 # Configuration
 # -------------------------
-SPLIT = "val"  # change as needed
-MODEL_NAME = "yolov8s_seg_lr0001"  # change as needed
+SPLIT = "test"  # change as needed
+MODEL_NAME = "yolov8m_sgd_lr0001"  # change as needed
 MODEL_PATH = os.path.join("model", "YOLO", MODEL_NAME, "weights", "best.pt")
 IMAGE_DIR = f"dataset/{SPLIT}/images"
 LABEL_DIR = f"Processed_Images/YOLO/{MODEL_NAME}/{SPLIT}/labels"
@@ -34,7 +35,7 @@ def prediction_needed(image_dir, label_dir):
     return False
 
 if prediction_needed(IMAGE_DIR, LABEL_DIR):
-    print(f"Warning: Prediction results missing. Running prediction with model: {MODEL_NAME}")
+    print(f"Warning: Prediction results missing. Running prediction with model: {MODEL_NAME} for {SPLIT}")
     predict_model(weight_path= MODEL_PATH, config_name=MODEL_NAME, task = task, name = SPLIT)
     print("Prediction complete.")
 
@@ -44,17 +45,28 @@ if prediction_needed(IMAGE_DIR, LABEL_DIR):
 def parse_yolo_line(line, img_width, img_height, task):
     """Parse a YOLO format line and return bounding box coordinates"""
     parts = line.strip().split()
-    if len(parts) < 6:
-        return None
     
-    class_id = int(float(parts[0]))
-    confidence = float(parts[-1])
-    coords = list(map(float, parts[1:-1]))
-    # cx, cy, w, h = map(float, parts[1:5])
+    # Ground truth for detection: no confidence, 5 values
+    if task == "detect" and len(parts) == 5:
+        class_id = int(float(parts[0]))
+        cx, cy, w, h = map(float, parts[1:5])
+        cx, cy, w, h = cx * img_width, cy * img_height, w * img_width, h * img_height
+        x1 = int(cx - w / 2)
+        y1 = int(cy - h / 2)
+        x2 = int(cx + w / 2)
+        y2 = int(cy + h / 2)
+        return {
+            "class_id": class_id,
+            "bbox": [x1, y1, x2, y2],
+            "confidence": 1.0,  # assumed for GT
+            "format": "bbox"
+        }
     
     # Convert YOLO format to (x1, y1, x2, y2)
-    if task == "detect" and len(coords) == 4:
-        cx, cy, w, h = coords
+    if task == "detect" and len(parts) == 6:
+        class_id = int(float(parts[0]))
+        cx, cy, w, h = map(float, parts[1:5])
+        confidence = float(parts[5])
         cx, cy, w, h = cx * img_width, cy * img_height, w * img_width, h * img_height
         x1 = int(cx - w / 2)
         y1 = int(cy - h / 2)
@@ -62,12 +74,16 @@ def parse_yolo_line(line, img_width, img_height, task):
         y2 = int(cy + h / 2)
         return {"class_id": class_id, "bbox": [x1, y1, x2, y2], "confidence": confidence, "format": "bbox"}
 
-    elif task == "segment" and len(coords) >= 6 and len(coords) % 2 == 0:
-        points = []
-        for i in range(0, len(coords), 2):
-            x = int(coords[i] * img_width)
-            y = int(coords[i + 1] * img_height)
-            points.append([x, y])
+    # Prediction for segmentation: multiple points and confidence
+    elif task == "segment" and len(parts) >= 7 and (len(parts) - 2) % 2 == 0:
+        class_id = int(float(parts[0]))
+        confidence = float(parts[-1])
+        coords = list(map(float, parts[1:-1]))
+        points = [
+            [int(coords[i] * img_width), int(coords[i + 1] * img_height)]
+            for i in range(0, len(coords), 2)
+        ]
+        
         return {"class_id": class_id, "points": points, "confidence": confidence, "format": "mask"}
 
 # -------------------------
@@ -96,9 +112,10 @@ for image_name in tqdm(os.listdir(IMAGE_DIR), desc="Rendering predictions and an
     if os.path.exists(annotation_path):
         with open(annotation_path, "r") as f:
             for line in f:
-                annotation = parse_yolo_line(line, width, height, task="detect"))
+                annotation = parse_yolo_line(line, width, height, task= "detect")
                 if annotation is None:
                     print(f"Warning: Annotation not found for {image_name}")
+                    print(f" Line: {line.strip()}")
                     continue
                 
                 x1, y1, x2, y2 = annotation['bbox']
@@ -108,22 +125,25 @@ for image_name in tqdm(os.listdir(IMAGE_DIR), desc="Rendering predictions and an
                 cv2.rectangle(image, (x1, y1), (x2, y2), (255, 128, 0), 2)  # Blue color
                 label_gt = f"GT_class_{class_id}"
                 cv2.putText(image, label_gt, (x1, y1 - 20), cv2.FONT_HERSHEY_SIMPLEX,
-                           0.5, (255, 128, 0), 1)  # Blue text
+                           0.8, (255, 128, 0), 1)  # Blue text
     
     # Draw predictions in GREEN
     if os.path.exists(label_path):
-        print("Expected label path:", label_path)
-        print("File exists?", os.path.exists(label_path))
+
         with open(label_path, "r") as f:
             for line in f:
-                pred = parse_yolo_line(line, width, height)
+                pred = parse_yolo_line(line, width, height, task=task)
                 if pred is None or pred['confidence'] < CONFIDENCE_THRESHOLD:
                     continue
-                x1, y1, x2, y2 = pred['bbox']
-                pred_boxes.append([x1, y1, x2, y2])
-                pred_scores.append(round(pred['confidence'], 4))
-                cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 128), 2)
-                cv2.putText(image, f"Pred_class_{pred['class_id']} {pred['confidence']:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 128), 1)
+                if pred["format"] == "bbox":
+                    x1, y1, x2, y2 = pred['bbox']
+                    cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 128), 2)
+                    cv2.putText(image, f"Pred_class_{pred['class_id']} {pred['confidence']:.2f}", (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 128), 1)
+                elif pred["format"] == "mask":
+                    cv2.polylines(image, [np.array(pred["points"], dtype=np.int32)], isClosed=True, color=(0, 255, 128), thickness=2)
+                    label_x, label_y = pred["points"][0]
+                    cv2.putText(image, f"Pred_{pred['class_id']} {pred['confidence']:.2f}", (label_x, label_y - 5),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 128), 1)
 
     # Add legend
     legend_y = 30

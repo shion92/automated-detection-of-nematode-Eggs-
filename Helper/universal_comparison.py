@@ -60,6 +60,22 @@ MODEL_CONFIGS = [
     ),
     
     ModelConfig(
+        model_name="YOLOv8m",
+        model_type="yolo", 
+        pred_folder="Processed_Images/YOLO/yolov8m_sgd_lr0001/test/labels",
+        gt_folder="dataset/test/labels",
+        gt_format="yolo"
+    ),
+    
+    ModelConfig(
+        model_name="YOLOv8m-max",
+        model_type="yolo", 
+        pred_folder="Processed_Images/YOLO/yolov8m_sgd_lr0001_max/test/labels",
+        gt_folder="dataset/test/labels",
+        gt_format="yolo"
+    ),
+    
+    ModelConfig(
         model_name="Faster-RCNN-resnet50-lr0.005",
         model_type="faster_rcnn",
         pred_folder="Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.005/test",
@@ -94,7 +110,7 @@ MODEL_CONFIGS = [
     ModelConfig(
         model_name="Faster-RCNN-resnet34-lr0.001",
         model_type="faster_rcnn",
-        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.001/test",
+        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.0001/test",
         gt_folder="dataset/test/annotations",
         gt_format="pascal_voc"
     ),
@@ -102,7 +118,7 @@ MODEL_CONFIGS = [
     ModelConfig(
         model_name="Faster-RCNN-resnet34-lr0.0001",
         model_type="faster_rcnn",
-        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.0001/test",
+        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.0001/test", 
         gt_folder="dataset/test/annotations",
         gt_format="pascal_voc"
     )
@@ -170,7 +186,8 @@ def load_pascal_voc_ground_truth(folder: str) -> Dict[str, List[List[float]]]:
     gt_data = {}
     
     for xml_file in glob.glob(os.path.join(folder, '*.xml')):
-        filename = os.path.splitext(os.path.basename(xml_file))[0]
+        filename = os.path.splitext(os.path.basename(xml_file))[0].lower()
+        
         boxes = []
         
         try:
@@ -220,38 +237,66 @@ def load_yolo_predictions(folder: str) -> Dict[str, List[Tuple[List[float], floa
 
 def load_faster_rcnn_predictions(folder: str) -> Dict[str, List[Tuple[List[float], float]]]:
     """
-    Load Faster R-CNN predictions from COCO-style JSON with image_id as filename (e.g. "Image_62.tif").
-    Converts bounding boxes from [x, y, w, h] to [x1, y1, x2, y2] and returns a dict keyed by filename (without extension).
+    Load .json predictions from a folder for Faster RCNN. Supports:
+    1. COCO-style: List of dicts with 'image_id', 'bbox' ([x, y, w, h]), 'score'
+    2. Custom: File per image, with {'boxes': [...], 'scores': [...]}, boxes in [x1, y1, x2, y2] or [x, y, w, h]
+    
     """
     print(f"Loading Faster R-CNN predictions from: {folder}")
     pred_data = {}
 
     for json_file in glob.glob(os.path.join(folder, '*.json')):
+        if "image" not in os.path.basename(json_file).lower():
+            continue
         try:
             with open(json_file, 'r') as f:
                 data = json.load(f)
+            
+            
+            if isinstance(data, list) and all(isinstance(item, dict) for item in data):
+                for item in data:
+                    # Extract clean filename (e.g., Image_62)
+                    filename = os.path.splitext(item['image_id'])[0]
 
-            for item in data:
-                # Extract clean filename (e.g., Image_62)
-                filename = os.path.splitext(item['image_id'])[0]
+                    # Skip if not the target class (optional, if you're filtering)
+                    if item.get("category_id", 1) != 1:
+                        continue
 
-                # Skip if not the target class (optional, if you're filtering)
-                if item.get("category_id", 1) != 1:
+                    # Convert bbox format from [x, y, width, height] 
+                    x, y, w, h = item["bbox"]
+                    bbox = [x, y, x + w, y + h]
+                    score = item["score"]
+
+                    if filename not in pred_data:
+                        pred_data[filename] = []
+                    pred_data.setdefault(filename, []).append((bbox, score))
+
+            elif isinstance(data, dict) and 'boxes' in data and 'scores' in data:
+                filename = Path(json_file).stem.lower()
+                boxes = data['boxes']
+                scores = data['scores']
+
+                if len(boxes) != len(scores):
+                    print(f"Warning: Mismatch between boxes and scores in {filename}")
                     continue
 
-                # Convert bbox format from [x, y, width, height] 
-                x, y, w, h = item["bbox"]
-                bbox = [x, y, x + w, y + h]
-                score = item["score"]
+                entries = []
+                for box, score in zip(boxes, scores):
+                    # If box is [x, y, w, h] → convert to [x1, y1, x2, y2]
+                    if len(box) == 4:
+                        x1, y1, x2, y2 = box
+                        bbox = [x1, y1, x2, y2]
+                        entries.append((bbox, score))
+                    else:
+                        print(f"Invalid box in {filename}: {box}")
+                        continue
 
-                if filename not in pred_data:
-                    pred_data[filename] = []
-                pred_data[filename].append((bbox, score))
-
-            # Sort predictions by confidence descending
-            for filename in pred_data:
-                pred_data[filename] = sorted(pred_data[filename], key=lambda x: -x[1])
-
+                pred_data[filename] = sorted(entries, key=lambda x: -x[1])
+                
+            
+            else:
+                print(f"Warning: Unknown format in file: {json_file}")
+            
         except Exception as e:
             print(f"Error loading {json_file}: {e}")
             continue
@@ -363,7 +408,7 @@ def evaluate_model(config: ModelConfig) -> Dict[str, float]:
     pred_folder = os.path.join(config.pred_folder)
     if config.model_type in ['yolo', 'yolo_seg']:
         pred_data = load_yolo_predictions(pred_folder)
-    else:
+    elif config.model_type in ['faster_rcnn']:
         pred_data = load_faster_rcnn_predictions(pred_folder)
     
     if not gt_data or not pred_data:
@@ -480,14 +525,18 @@ def print_comparison_table(all_results: List[Dict]):
     
     print(summary_df.to_string(index=False))
     
-    # Find best models
-    print(f"\nBEST PERFORMERS:")
-    print(f"Best Precision: {df.loc[df['Precision'].idxmax(), 'Model']} ({df['Precision'].max():.4f})")
-    print(f"Best Recall:    {df.loc[df['Recall'].idxmax(), 'Model']} ({df['Recall'].max():.4f})")
-    print(f"Best F1:        {df.loc[df['F1'].idxmax(), 'Model']} ({df['F1'].max():.4f})")
-    print(f"Best mAP@0.5:   {df.loc[df['mAP@0.5'].idxmax(), 'Model']} ({df['mAP@0.5'].max():.4f})")
-    print(f"Best mAP@0.5:0.95: {df.loc[df['mAP@0.5:0.95'].idxmax(), 'Model']} ({df['mAP@0.5:0.95'].max():.4f})")
+    # Find best performers (with tolerance to floating point equality)
+    def get_best_models(metric):
+        max_val = df[metric].max()
+        best = df[df[metric] == max_val]['Model'].tolist()
+        return best, max_val
 
+    print(f"\nBEST PERFORMERS:")
+
+    for metric in ['Precision', 'Recall', 'F1', 'mAP@0.5', 'mAP@0.5:0.95']:
+        best_models, best_val = get_best_models(metric)
+        best_str = ', '.join(best_models)
+        print(f"Best {metric}: {best_str} ({best_val:.4f})")
 # -------------------------
 # MAIN EXECUTION
 # -------------------------
