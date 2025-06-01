@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple, Optional
 # -------------------------
 MODEL_NAME = 'yolov8s_sgd_lr0001' # change this 
 SPLIT = 'val'
-GT_FOLDER = os.path.join('dataset', 'test', 'labels') # for yolov8s_segmentation this will have to change to dataset_seg
+GT_FOLDER = os.path.join('dataset', 'test', 'labels') 
 PRED_FOLDER = os.path.join('Processed_Images', 'YOLO', MODEL_NAME, SPLIT, 'labels')
 OUTPUT_DIR = os.path.join('evaluation', 'YOLO', MODEL_NAME)
 TARGET_CLASS = 0

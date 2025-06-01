@@ -11,8 +11,8 @@ from yolo_training import predict_model
 # -------------------------
 # Configuration
 # -------------------------
-SPLIT = "test"  # change as needed
-MODEL_NAME = "yolov8m_sgd_lr0001"  # change as needed
+SPLIT = "val"  # change as needed
+MODEL_NAME = "yolov8s_seg_lr0001"  # change as needed
 MODEL_PATH = os.path.join("model", "YOLO", MODEL_NAME, "weights", "best.pt")
 IMAGE_DIR = f"dataset/{SPLIT}/images"
 LABEL_DIR = f"Processed_Images/YOLO/{MODEL_NAME}/{SPLIT}/labels"

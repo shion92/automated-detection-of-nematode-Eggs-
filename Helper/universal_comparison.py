@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Tuple, Optional, Union
 from pathlib import Path
-import argparse
+import cv2
 from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 
@@ -17,6 +17,8 @@ from pycocotools.cocoeval import COCOeval
 # -------------------------
 # CONFIGURATION
 # -------------------------
+SPLIT = "test" # change if needed
+
 class ModelConfig:
     """Configuration for different model types"""
     def __init__(self, model_name: str, model_type: str, pred_folder: str, 
@@ -32,96 +34,114 @@ MODEL_CONFIGS = [
     ModelConfig(
         model_name="YOLOv8s",
         model_type="yolo",
-        pred_folder="Processed_Images/YOLO/yolov8s_sgd_lr0001/test/labels",
-        gt_folder="dataset/test/labels",
+        pred_folder=f"Processed_Images/YOLO/yolov8s_sgd_lr0001/{SPLIT}/labels",
+        gt_folder=f"dataset/{SPLIT}/labels",
         gt_format="yolo"
     ),
     ModelConfig(
         model_name="YOLOv8s-max",
         model_type="yolo",
-        pred_folder="Processed_Images/YOLO/yolov8s_sgd_lr0001_max/test/labels",
-        gt_folder="dataset/test/labels",
-        gt_format="yolo"
-    ),
-    ModelConfig(
-        model_name="YOLOv8s-seg",
-        model_type="yolo_seg", 
-        pred_folder="Processed_Images/YOLO/yolov8s_seg/test/labels",
-        gt_folder="dataset/test/labels",
+        pred_folder=f"Processed_Images/YOLO/yolov8s_sgd_lr0001_max/{SPLIT}/labels",
+        gt_folder=f"dataset/{SPLIT}/labels",
         gt_format="yolo"
     ),
     
-    ModelConfig(
-        model_name="YOLOv8s-seg-max",
-        model_type="yolo_seg", 
-        pred_folder="Processed_Images/YOLO/yolov8s_seg_eras/test/labels",
-        gt_folder="dataset/test/labels",
-        gt_format="yolo"
-    ),
     
     ModelConfig(
         model_name="YOLOv8m",
         model_type="yolo", 
-        pred_folder="Processed_Images/YOLO/yolov8m_sgd_lr0001/test/labels",
-        gt_folder="dataset/test/labels",
+        pred_folder=f"Processed_Images/YOLO/yolov8m_sgd_lr0001/{SPLIT}/labels",
+        gt_folder=f"dataset/{SPLIT}/labels",
         gt_format="yolo"
     ),
     
     ModelConfig(
         model_name="YOLOv8m-max",
         model_type="yolo", 
-        pred_folder="Processed_Images/YOLO/yolov8m_sgd_lr0001_max/test/labels",
-        gt_folder="dataset/test/labels",
+        pred_folder=f"Processed_Images/YOLO/yolov8m_sgd_lr0001_max/{SPLIT}/labels",
+        gt_folder=f"dataset/{SPLIT}/labels",
         gt_format="yolo"
     ),
     
     ModelConfig(
         model_name="Faster-RCNN-resnet50-lr0.005",
         model_type="faster_rcnn",
-        pred_folder="Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.005/test",
-        gt_folder="dataset/test/annotations",
+        pred_folder=f"Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.005/{SPLIT}",
+        gt_folder=f"dataset/{SPLIT}/annotations",
         gt_format="pascal_voc"
     ),
     
     ModelConfig(
         model_name="Faster-RCNN-resnet50-lr0.001",
         model_type="faster_rcnn",
-        pred_folder="Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.001/test",
-        gt_folder="dataset/test/annotations",
+        pred_folder=f"Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.001/{SPLIT}",
+        gt_folder=f"dataset/{SPLIT}/annotations",
         gt_format="pascal_voc"
     ),
     
     ModelConfig(
         model_name="Faster-RCNN-resnet50-lr0.0001",
         model_type="faster_rcnn",
-        pred_folder="Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.0001/test",
-        gt_folder="dataset/test/annotations",
+        pred_folder=f"Processed_Images/faster_rcnn_resnet50/Predictions/lr_0.0001/{SPLIT}",
+        gt_folder=f"dataset/{SPLIT}/annotations",
         gt_format="pascal_voc"
     ),
     
     ModelConfig(
         model_name="Faster-RCNN-resnet34-lr0.005",
         model_type="faster_rcnn",
-        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.005/test",
-        gt_folder="dataset/test/annotations",
+        pred_folder=f"Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.005/{SPLIT}",
+        gt_folder=f"dataset/{SPLIT}/annotations",
         gt_format="pascal_voc"
     ),
     
     ModelConfig(
         model_name="Faster-RCNN-resnet34-lr0.001",
         model_type="faster_rcnn",
-        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.0001/test",
-        gt_folder="dataset/test/annotations",
+        pred_folder=f"Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.0001/{SPLIT}",
+        gt_folder=f"dataset/{SPLIT}/annotations",
         gt_format="pascal_voc"
     ),
     
     ModelConfig(
         model_name="Faster-RCNN-resnet34-lr0.0001",
         model_type="faster_rcnn",
-        pred_folder="Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.0001/test", 
-        gt_folder="dataset/test/annotations",
+        pred_folder=f"Processed_Images/faster_rcnn_resnet34/Predictions/lr_0.0001/{SPLIT}", 
+        gt_folder=f"dataset/{SPLIT}/annotations",
         gt_format="pascal_voc"
-    )
+    ),
+    
+    ModelConfig(
+        model_name="DeepLabV3+-lr0.0001",
+        model_type="segmentation",
+        pred_folder=f"Processed_Images/deeplab/Predictions/lr_0.0001/{SPLIT}",  # .json or PNG masks
+        gt_folder=f"dataset/{SPLIT}/masks",  # PNG mask folder
+        gt_format="mask"
+    ),
+    
+     ModelConfig(
+        model_name="DeepLabV3+-lr0.0005",
+        model_type="segmentation",
+        pred_folder=f"Processed_Images/deeplab/Predictions/lr_0.0005/{SPLIT}",  # .json or PNG masks
+        gt_folder=f"dataset/{SPLIT}/masks",  # PNG mask folder
+        gt_format="mask"
+    ),
+     
+    ModelConfig(
+        model_name="YOLOv8s-seg",
+        model_type="segmentation", 
+        pred_folder=f"Processed_Images/YOLO/yolov8s_seg_lr0001/{SPLIT}/labels",
+        gt_folder=f"dataset/{SPLIT}/masks",
+        gt_format="mask"
+    ),
+    
+    ModelConfig(
+        model_name="YOLOv8s-seg-max",
+        model_type="segmentation", 
+        pred_folder=f"Processed_Images/YOLO/yolov8s_seg_lr0001_eras/{SPLIT}/labels",
+        gt_folder=f"dataset/{SPLIT}/masks",
+        gt_format="mask"
+    ),
 ]
 
 OUTPUT_DIR = os.path.join("evaluation")
@@ -303,6 +323,74 @@ def load_faster_rcnn_predictions(folder: str) -> Dict[str, List[Tuple[List[float
 
     return pred_data
 
+def load_binary_mask_png(folder: str) -> Dict[str, np.ndarray]:
+    """Load binary ground truth or prediction masks from PNG"""
+    print(f"Loading PNG masks from {folder}")
+    data = {}
+    for path in glob.glob(os.path.join(folder, '*.png')):
+        key = Path(path).stem
+        mask = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        data[key] = (mask > 127).astype(np.uint8)
+    return data
+
+def load_binary_mask_json(folder: str) -> Dict[str, np.ndarray]:
+    """Load segmentation masks from JSON float arrays, convert to binary"""
+    print(f"Loading JSON masks from {folder}")
+    data = {}
+    for path in glob.glob(os.path.join(folder, '*.json')):
+        key = Path(path).stem
+        with open(path, 'r') as f:
+            json_data = json.load(f)
+        if "mask" in json_data:
+            arr = np.array(json_data["mask"])
+            binary = (arr >= 0.5).astype(np.uint8)  # thresholding
+            data[key] = binary
+    return data
+
+def load_yolo_segmentation_txt(folder: str, image_dir: str, confidence_thresh=0.5) -> Dict[str, np.ndarray]:
+    """Load YOLOv8-seg style polygon predictions and return binary masks"""
+    print(f"Loading YOLOv8 segmentation polygons from: {folder}")
+    pred_data = {}
+
+    for txt_file in glob.glob(os.path.join(folder, '*.txt')):
+        base_name = Path(txt_file).stem
+        image_path = os.path.join(image_dir, f"{base_name}.tif")  # or .jpg, .tif if needed
+        if not os.path.exists(image_path):
+            print(f"Warning: Image not found for {base_name}, skipping")
+            continue
+
+        image = cv2.imread(image_path)
+        if image is None:
+            print(f"Warning: Could not read image: {image_path}")
+            continue
+
+        height, width = image.shape[:2]
+        mask = np.zeros((height, width), dtype=np.uint8)
+
+        with open(txt_file, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) < 7 or (len(parts) - 2) % 2 != 0:
+                    continue  # not a valid polygon
+                class_id = int(float(parts[0]))
+                confidence = float(parts[-1])
+                if confidence < confidence_thresh:
+                    continue
+
+                coords = list(map(float, parts[1:-1]))
+                points = np.array([
+                    [int(coords[i] * width), int(coords[i + 1] * height)]
+                    for i in range(0, len(coords), 2)
+                ], dtype=np.int32)
+
+                cv2.fillPoly(mask, [points], color=1)  # fill with label 1
+
+        pred_data[base_name] = mask
+
+    return pred_data
+
+
+
 # -------------------------
 # EVALUATION FUNCTIONS
 # -------------------------
@@ -393,29 +481,108 @@ def compute_average_precision(gt_data: Dict, pred_data: Dict, iou_threshold: flo
     
     return ap
 
+def evaluate_segmentation(gt_masks: Dict[str, np.ndarray], pred_masks: Dict[str, np.ndarray]) -> Dict[str, float]:
+    ious, tps, fps, fns = [], 0, 0, 0
+
+    for key in gt_masks:
+        if key not in pred_masks:
+            continue
+        gt = gt_masks[key].astype(bool)
+        pred = pred_masks[key].astype(bool)
+        
+        # Resize prediction to match GT if needed
+        if pred.shape != gt.shape:
+            pred = cv2.resize(pred.astype(np.uint8), (gt.shape[1], gt.shape[0]), interpolation=cv2.INTER_NEAREST)
+            pred = pred.astype(bool)
+
+        intersection = np.logical_and(gt, pred).sum()
+        union = np.logical_or(gt, pred).sum()
+        iou = intersection / union if union > 0 else 0.0
+        ious.append(iou)
+
+        tps += intersection
+        fps += np.logical_and(~gt, pred).sum()
+        fns += np.logical_and(gt, ~pred).sum()
+
+    precision = tps / (tps + fps + 1e-6)
+    recall = tps / (tps + fns + 1e-6)
+    f1 = 2 * precision * recall / (precision + recall + 1e-6)
+
+    return {
+        "Precision": precision,
+        "Recall": recall,
+        "F1": f1,
+        "IoU": np.mean(ious) if ious else 0.0
+    }
+
 def evaluate_model(config: ModelConfig) -> Dict[str, float]:
     """Evaluate a single model configuration"""
     print(f"Evaluating {config.model_name} ({config.model_type})")
-    
-    # Load ground truth
+
     gt_folder = os.path.join(config.gt_folder)
+    pred_folder = os.path.join(config.pred_folder)
+
+    # -------------------------
+    # SEGMENTATION MODELS
+    # -------------------------
+    if config.model_type == 'segmentation':
+        gt_data = load_binary_mask_png(gt_folder)
+
+        # More robust detection of prediction format
+        json_files = [f for f in os.listdir(pred_folder) if f.endswith('.json')]
+        txt_files = [f for f in os.listdir(pred_folder) if f.endswith('.txt')]
+
+        if json_files:
+            pred_data = load_binary_mask_json(pred_folder)
+        elif txt_files:
+            pred_data = load_yolo_segmentation_txt(pred_folder, image_dir=os.path.join("dataset", SPLIT, "images"))
+        else:
+            print(f"Warning: No valid prediction files found in {pred_folder}")
+            return {}
+
+        if not gt_data:
+            print(f"Warning: No ground truth masks found for {config.model_name}")
+            return {}
+        if not pred_data:
+            print(f"Warning: No predicted masks loaded for {config.model_name}")
+            return {}
+
+        seg_metrics = evaluate_segmentation(gt_data, pred_data)
+
+        results =  {
+            'Model': config.model_name,
+            'Type': 'segmentation',
+            'Precision': seg_metrics['Precision'],
+            'Recall': seg_metrics['Recall'],
+            'F1': seg_metrics['F1'],
+            'mAP@0.5': 0.0,          # not meaningful for segmentation
+            'mAP@0.5:0.95': 0.0,
+            'Total_GT': len(gt_data),
+            'Total_Predictions': len(pred_data)
+        }
+        
+        return results
+
+    # -------------------------
+    # DETECTION MODELS
+    # -------------------------
     if config.gt_format == 'yolo':
         gt_data = load_yolo_ground_truth(gt_folder)
     else:
         gt_data = load_pascal_voc_ground_truth(gt_folder)
     
     # Load predictions
-    pred_folder = os.path.join(config.pred_folder)
     if config.model_type in ['yolo', 'yolo_seg']:
         pred_data = load_yolo_predictions(pred_folder)
-    elif config.model_type in ['faster_rcnn']:
+    elif config.model_type == 'faster_rcnn':
         pred_data = load_faster_rcnn_predictions(pred_folder)
-    
+    else:
+        raise ValueError(f"Unsupported model_type: {config.model_type}")
+
     if not gt_data or not pred_data:
         print(f"Warning: No data found for {config.model_name}")
         return {}
-    
-    # Compute metrics
+
     precision, recall, f1 = compute_detection_metrics(gt_data, pred_data, 0.5)
     
     # Compute AP at different IoU thresholds
@@ -441,8 +608,9 @@ def evaluate_model(config: ModelConfig) -> Dict[str, float]:
     
     # Add individual AP scores
     results.update(ap_metrics)
-    
+
     return results
+
 
 # -------------------------
 # TENSORBOARD LOGGING

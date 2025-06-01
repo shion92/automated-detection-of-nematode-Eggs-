@@ -23,7 +23,7 @@ from tqdm import tqdm
 # Configuration
 # -------------------------
 lr_list = [
-    0.01, 
+    # 0.01, 
     0.001, 
     0.0001, 
     0.0005, 
@@ -33,7 +33,7 @@ lr_list = [
 SPLIT = "test"
 IMAGE_DIR = f"dataset/{SPLIT}/images"
 GT_MASK_DIR  = f"dataset/{SPLIT}/masks"
-THRESH = 0.5   # binarisation threshold for predicted masks
+THRESH = 0.6   # binarisation threshold for predicted masks
 
 # -------------------------
 # IoU Helper 
