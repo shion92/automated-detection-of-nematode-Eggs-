@@ -1,7 +1,7 @@
 
 # Automated Detection of Nematode Eggs
 
-This repository contains main scripts, and documentation for the automated detection of nematode eggs using deep learning. 
+This repository contains the main scripts and documentation for an automated deep learning system to detect nematode eggs in microscopic images. The project was developed in collaboration with Lincoln University (Christchurch, NZ), in partnership with the Department of Agricultural Sciences, which focused on improving livestock health research, the goal was to streamline the egg detection process through a computer vision-based solution.
 
 The project supports training, fine-tuning, evaluation, prediction, and visualisation for Faster R-CNN, YOLOv8s and DeepLabV3+ models.
 
