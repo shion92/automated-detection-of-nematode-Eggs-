@@ -12,7 +12,7 @@ The code supports training, fine-tuning, evaluation, inference, and visualisatio
 
 ## Recorded results
 
-The table below reproduces the deployment-candidate rows from Table 1, “Performance Metrics for Test Set,” in the final project report. Values are preserved at the report's three-decimal precision and are also available in [`docs/results/reported-test-model-comparison.csv`](docs/results/reported-test-model-comparison.csv).
+The table below represents the “Performance Metrics for Test Set,” in the final project report.
 
 | Model | Precision | Recall | F1 | mAP@0.5 | mAP@0.5:0.95 |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -22,7 +22,7 @@ The table below reproduces the deployment-candidate rows from Table 1, “Perfor
 | Faster R-CNN, ResNet50, lr=0.005 | 0.947 | **1.000** | 0.973 | **1.000** | **0.676** |
 | Faster R-CNN, ResNet50, lr=0.001 | **1.000** | **1.000** | **1.000** | **1.000** | 0.663 |
 
-These figures describe one small held-out test set from this project. Separate saved JSON/CSV files may contain validation runs or later evaluation runs and therefore may not reproduce Table 1 exactly. The results should not be treated as estimates of performance on other laboratories, imaging systems, or nematode species.
+These figures describe one small held-out test set from this project. The results should not be treated as estimates of performance on other laboratories, imaging systems, or nematode species.
 
 ## Prediction examples
 
@@ -115,7 +115,7 @@ Before training or inference, update the dataset and model paths in the relevant
 For questions or contributions, contact Jacquelin Ruan at [shionshine@gmail.com](mailto:shionshine@gmail.com), or open an issue or pull request.
 ├── README.md              # Project documentation (this file)
 └── requirements.txt       # Python dependencies
-```
+...
 
 
 ---
