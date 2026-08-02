@@ -12,7 +12,7 @@ The code supports training, fine-tuning, evaluation, inference, and visualisatio
 
 ## Recorded results
 
-The table below represents the “Performance Metrics for Test Set,” in the final project report.
+The table below represents the candidate best models in “Performance Metrics for Test Set,” in the final project report.
 
 | Model | Precision | Recall | F1 | mAP@0.5 | mAP@0.5:0.95 |
 | --- | ---: | ---: | ---: | ---: | ---: |
