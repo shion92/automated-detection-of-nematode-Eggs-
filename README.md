@@ -30,19 +30,19 @@ Each image is an actual saved inference comparison. From left to right, the pane
 
 **Example 1 - low-contrast egg**
 
-![Four-model prediction comparison for image 01](docs/predictions/image-01-model-comparison.jpg)
+![Four-model prediction comparison for image 01](docs/image-01-model-comparison.jpg)
 
 **Example 2 - dark, partially occluded egg**
 
-![Four-model prediction comparison for image 62](docs/predictions/image-62-model-comparison.jpg)
+![Four-model prediction comparison for image 62](docs/image-62-model-comparison.jpg)
 
 **Example 3 - egg near microscope artefacts**
 
-![Four-model prediction comparison for image 77](docs/predictions/image-77-model-comparison.jpg)
+![Four-model prediction comparison for image 77](docs/image-77-model-comparison.jpg)
 
 **Example 4 - overexposed field**
 
-![Four-model prediction comparison for image 113](docs/predictions/image-113-model-comparison.jpg)
+![Four-model prediction comparison for image 113](docs/image-113-model-comparison.jpg)
 
 ## Repository structure
 
